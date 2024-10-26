@@ -4,14 +4,14 @@
   "icons": [
     {
       "sizes": "512x512",
-      "src": "icon512_maskable.png",
+      "src": "512.png",
       "type": "image/png"
     }
   ],
   "display": "standalone",
   "lang": "ja",
-  "name": "んちゃんねる",
-  "short_name": "んちゃんねる",
+  "name": "noscord",
+  "short_name": "noscord",
   "description": "Nostr プロトコルを使用したパブリックチャット専用クライアントです",
   "start_url": "/",
   "scope": "/"
