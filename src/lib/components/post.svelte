@@ -45,16 +45,18 @@
     >
       {getDisplayName()}
     </h3>
-    <time 
-      class="post-time" 
-      data-time={parseTimeOnly(event.created_at)}
-      title={parseCreated(event.created_at)}
-    >
-      {parseTimeOnly(event.created_at)}
-    </time>
-    <aside class="post-id" title="投稿ID: {event.id}">
-      ID:{event.id.slice(0, 10)}
-    </aside>
+    <div class="post-meta">
+      <aside class="post-id" title="投稿ID: {event.id}">
+        ID: {event.id.slice(0, 10)}
+      </aside>
+      <time 
+        class="post-time" 
+        data-time={parseTimeOnly(event.created_at)}
+        title={parseCreated(event.created_at)}
+      >
+        {parseTimeOnly(event.created_at)}
+      </time>
+    </div>
   </div>
   
   {#if reply && action}
@@ -112,16 +114,43 @@
 
   /* ヘッダー：レスポンシブ対応 */
   .post-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
     margin-bottom: 8px;
-    min-width: 0;
   }
 
+  /* デスクトップ表示：横並び */
+  @media (min-width: 768px) {
+    .post-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .post-author {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .post-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+  }
+
+  /* モバイル表示：縦並び */
   @media (max-width: 767px) {
     .post-header {
+      display: block;
+    }
+
+    .post-meta {
+      display: flex;
+      align-items: center;
       gap: 8px;
+      margin-top: 4px;
+      padding-left: 8px;
     }
   }
 
@@ -134,30 +163,18 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
-    min-width: 0;
   }
 
   .post-time {
     font-size: 0.85rem;
     color: var(--muted-text);
     white-space: nowrap;
-    flex-shrink: 0;
   }
 
   .post-id {
     font-size: 0.8rem;
     color: var(--muted-text);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px;
-  }
-
-  @media (max-width: 767px) {
-    .post-id {
-      max-width: 80px;
-    }
   }
 
   /* コンテンツエリア */

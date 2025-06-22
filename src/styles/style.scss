@@ -256,18 +256,11 @@ p {
   font-weight: var(--font-weight-normal);
   color: var(--muted-text);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
 }
 
 @media (max-width: 767px) {
   .post-header {
     gap: 8px;
-  }
-  
-  .post-id {
-    max-width: 80px;
   }
 }
 

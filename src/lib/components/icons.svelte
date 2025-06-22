@@ -11,7 +11,8 @@
     Settings,
     Reply,
     Eye,
-    EyeOff
+    EyeOff,
+    Trash2
   } from 'lucide-svelte';
 
   export let name: string;
@@ -32,7 +33,8 @@
     gear: Settings,
     reply: Reply,
     eye: Eye,
-    'eye-off': EyeOff
+    'eye-off': EyeOff,
+    trash: Trash2
   };
 
   $: IconComponent = iconMap[name as keyof typeof iconMap];

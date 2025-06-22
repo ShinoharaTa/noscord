@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { settingsModal, getSecKey, saveToIdentifiedKey } from '$lib/store';
+  import { settingsModal, getSecKey, saveToIdentifiedKey, removeIdentifiedKey } from '$lib/store';
   import { generateSecretKey } from 'nostr-tools';
   import { bytesToHex } from '@noble/hashes/utils';
   import { nsecEncode, decode } from 'nostr-tools/nip19';
@@ -79,6 +79,18 @@
   const toggleSecretKeyVisibility = () => {
     showSecretKey = !showSecretKey;
   };
+
+  const deleteSecretKey = () => {
+    const confirmed = confirm(
+      '本当に秘密鍵を削除しますか？\n\nこの操作は取り消せません。秘密鍵を削除すると、このアカウントにアクセスできなくなります。\n\n削除する前に秘密鍵をバックアップしていることを確認してください。'
+    );
+    
+    if (confirmed) {
+      removeIdentifiedKey();
+      secretKey = '';
+      alert('秘密鍵を削除しました。');
+    }
+  };
 </script>
 
 <!-- 設定モーダル -->
@@ -143,6 +155,12 @@
                 <Icon name="refresh" size={16} />
                 <span>新しい鍵を生成</span>
               </button>
+              {#if secretKey}
+                <button class="btn-danger" on:click={deleteSecretKey}>
+                  <Icon name="trash" size={16} />
+                  <span>秘密鍵を削除</span>
+                </button>
+              {/if}
             </div>
           </div>
           
@@ -426,6 +444,21 @@
     background: var(--hover-bg, #e9ecef);
   }
 
+  .btn-danger {
+    background: var(--danger-color, #dc3545);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .btn-danger:hover {
+    background: var(--danger-color-hover, #c82333);
+  }
+
   .warning-box {
     display: flex;
     gap: 12px;
@@ -523,6 +556,8 @@
       --warning-border: #f59e0b;
       --warning-text: #92400e;
       --info-bg: #40444b;
+      --danger-color: #f04747;
+      --danger-color-hover: #d73502;
     }
   }
 </style> 

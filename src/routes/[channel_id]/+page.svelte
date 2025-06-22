@@ -394,15 +394,11 @@
             {:else}
               <div class="login-prompt">
                 <div class="login-message">
-                  <Icon name="key" size={20} />
-                  <div class="login-text">
-                    <h3>ログインして参加する</h3>
-                    <p>メッセージを送信するには、秘密鍵の設定が必要です。</p>
-                  </div>
+                  <p>メッセージ送信にはログインが必要です</p>
                 </div>
                 <button class="login-button" on:click={() => settingsModal.set(true)}>
                   <Icon name="key" size={16} />
-                  <span>キー管理を開く</span>
+                  <span>ログインする</span>
                 </button>
               </div>
             {/if}
@@ -593,7 +589,7 @@
   .date-separator {
     display: flex;
     align-items: center;
-    margin: 24px 0 16px 0;
+    margin: 20px 0 12px 0;
     gap: 12px;
   }
 
@@ -618,7 +614,7 @@
     z-index: 10;
     border-top: 1px solid var(--border-color);
     background: var(--chat-bg);
-    padding: 20px 0;
+    padding: 16px 0;
     width: 100%;
   }
 
@@ -750,21 +746,24 @@
     background: var(--login-prompt-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 20px;
-    text-align: center;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 600px;
+    margin: 0 auto;
   }
 
-  .login-prompt h3 {
-    margin: 0 0 8px 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--primary-text);
+  .login-message {
+    flex: 1;
   }
 
   .login-prompt p {
-    margin: 0 0 16px 0;
+    margin: 0;
     color: var(--secondary-text);
-    line-height: 1.5;
+    line-height: 1.4;
+    font-size: 0.9rem;
   }
 
   .login-button {
@@ -772,12 +771,17 @@
     color: white;
     border: none;
     border-radius: 6px;
-    padding: 10px 20px;
-    font-size: 1rem;
+    padding: 10px 16px;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .login-button:hover {
@@ -823,20 +827,35 @@
     }
 
     .login-prompt {
-      padding: 16px;
+      padding: 12px 16px;
+      max-width: none;
+      margin: 0;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+      text-align: center;
     }
 
     .login-message {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-      text-align: left;
+      flex: none;
+    }
+
+    .login-prompt p {
+      font-size: 0.85rem;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .login-message {
+      text-align: center;
+      margin-bottom: 12px;
     }
 
     .login-button {
-      align-self: stretch;
+      width: 100%;
       justify-content: center;
+      padding: 12px 16px;
+      font-size: 0.95rem;
     }
   }
 
