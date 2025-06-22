@@ -3,6 +3,9 @@ import { format, fromUnixTime } from "date-fns";
 export const parseCreated = (time: number) =>
   format(fromUnixTime(time), "yyyy/MM/dd HH:mm:ss");
 
+export const parseTimeOnly = (time: number) =>
+  format(fromUnixTime(time), "HH:mm:ss");
+
 export function parseContent(text: string) {
   const urlPattern = /(https?:\/\/[^\s]+)/g;
   const twitterPattern = /(https?:\/\/(twitter\.com|x\.com)\/[^\s]+)/g;

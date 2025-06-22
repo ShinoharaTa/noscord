@@ -30,6 +30,40 @@
     return [...events].sort((a, b) => a.created_at - b.created_at);
   };
 
+  // 日付グループ化関数
+  const groupByDate = (events: Nostr.Event[]) => {
+    const sortedEvents = sorted(events);
+    const groups: { date: string, displayDate: string, events: Nostr.Event[] }[] = [];
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    for (const event of sortedEvents) {
+      const eventDate = new Date(event.created_at * 1000);
+      const dateKey = eventDate.toDateString();
+      
+      // 表示用の日付文字列を生成
+      let displayDate: string;
+      if (eventDate.toDateString() === today.toDateString()) {
+        displayDate = "今日";
+      } else if (eventDate.toDateString() === yesterday.toDateString()) {
+        displayDate = "昨日";
+      } else {
+        displayDate = `${eventDate.getMonth() + 1}/${eventDate.getDate()}`;
+      }
+
+      // 既存のグループを探す
+      let group = groups.find(g => g.date === dateKey);
+      if (!group) {
+        group = { date: dateKey, displayDate, events: [] };
+        groups.push(group);
+      }
+      group.events.push(event);
+    }
+
+    return groups;
+  };
+
   const limitLists = [20, 50, 100];
   const selectedLimit = writable(20);
   let channelNameLoaded = false;
@@ -42,6 +76,7 @@
   let componentKey = 0;
   let showMenuButton = false;
   let isLoggedIn = false;
+  let textareaElement: HTMLTextAreaElement;
 
   // channel_idが変更されたときにチャンネル情報を再読み込み
   const loadChannelInfo = async (id: string) => {
@@ -85,12 +120,12 @@
     checkLoginStatus();
 
     // メニューボタンの表示制御
-    const updateMenuButton = () => {
+    const handleResize = () => {
       showMenuButton = window.innerWidth < 1024;
     };
 
-    updateMenuButton();
-    window.addEventListener('resize', updateMenuButton);
+    handleResize();
+    window.addEventListener('resize', handleResize);
 
     // ページフォーカス時にログイン状態を再チェック
     const handleFocus = () => {
@@ -99,7 +134,7 @@
     window.addEventListener('focus', handleFocus);
 
     return () => {
-      window.removeEventListener('resize', updateMenuButton);
+      window.removeEventListener('resize', handleResize);
       window.removeEventListener('focus', handleFocus);
     };
   });
@@ -117,6 +152,11 @@
   }
 
   $: submitDisabled = !postContent.trim();
+
+  // textareaの初期化
+  $: if (textareaElement) {
+    initializeTextarea(textareaElement);
+  }
 
   const submit = async () => {
     const seckey = getSecKey();
@@ -140,6 +180,12 @@
         // 投稿内容とリプライ状態をクリア
         postContent = "";
         replyId = null;
+        
+        // textareaの高さをリセット
+        if (textareaElement) {
+          textareaElement.style.height = 'auto';
+          textareaElement.style.height = Math.max(textareaElement.scrollHeight, 52) + 'px';
+        }
       }
     } catch (error) {
       alert(`投稿に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
@@ -157,6 +203,34 @@
     if (!event) return;
     parentEvent = event;
     modal.set(true);
+  };
+
+  // textareaの自動リサイズ機能
+  const autoResize = (event: Event) => {
+    const textarea = event.target as HTMLTextAreaElement;
+    if (textarea) {
+      // 現在の高さを保存
+      const currentHeight = textarea.style.height;
+      
+      // 高さを一時的にautoにしてscrollHeightを取得
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      
+      // 適切な高さを計算（最小52px、最大160px）
+      const newHeight = Math.min(Math.max(scrollHeight, 52), 160);
+      
+      // 高さを設定
+      textarea.style.height = newHeight + 'px';
+    }
+  };
+
+  // textareaの初期化
+  const initializeTextarea = (textarea: HTMLTextAreaElement) => {
+    if (textarea && !textarea.style.height) {
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      textarea.style.height = Math.max(scrollHeight, 52) + 'px';
+    }
   };
 </script>
 
@@ -223,47 +297,59 @@
       <!-- メッセージエリア -->
       <div class="messages-container">
         <div class="messages-list">
-          {#each sorted(events) as event (event.id)}
-            <Metadata let:metadata pubkey={event.pubkey} queryKey={["user_meta", event.pubkey]} >
-              <div class="message-wrapper">
-                <Post
-                  {event}
-                  {metadata}
-                  on:reply={(e) => (replyId = e.detail.id)}
-                  on:openReply={(e) => openReply(e.detail.id)}
-                />
-              </div>
-              
-              <!-- メタデータ取得中の表示 -->
-              <div slot="loading" class="message-wrapper">
-                <Post
-                  {event}
-                  metadata={undefined}
-                  on:reply={(e) => (replyId = e.detail.id)}
-                  on:openReply={(e) => openReply(e.detail.id)}
-                />
-              </div>
-              
-              <!-- メタデータが見つからない場合の表示 -->
-              <div slot="nodata" class="message-wrapper">
-                <Post
-                  {event}
-                  metadata={undefined}
-                  on:reply={(e) => (replyId = e.detail.id)}
-                  on:openReply={(e) => openReply(e.detail.id)}
-                />
-              </div>
-              
-              <!-- エラー時の表示 -->
-              <div slot="error" class="message-wrapper">
-                <Post
-                  {event}
-                  metadata={undefined}
-                  on:reply={(e) => (replyId = e.detail.id)}
-                  on:openReply={(e) => openReply(e.detail.id)}
-                />
-              </div>
-            </Metadata>
+          {#each groupByDate(events) as group (group.date)}
+            <!-- 日付セパレーター -->
+            <div class="date-separator">
+              <div class="date-line"></div>
+              <div class="date-label">{group.displayDate}</div>
+              <div class="date-line"></div>
+            </div>
+            
+            <!-- その日の投稿一覧 -->
+            <div class="posts-container">
+              {#each group.events as event (event.id)}
+                <Metadata let:metadata pubkey={event.pubkey} queryKey={["user_meta", event.pubkey]} >
+                  <div class="message-wrapper">
+                    <Post
+                      {event}
+                      {metadata}
+                      on:reply={(e) => (replyId = e.detail.id)}
+                      on:openReply={(e) => openReply(e.detail.id)}
+                    />
+                  </div>
+                  
+                  <!-- メタデータ取得中の表示 -->
+                  <div slot="loading" class="message-wrapper">
+                    <Post
+                      {event}
+                      metadata={undefined}
+                      on:reply={(e) => (replyId = e.detail.id)}
+                      on:openReply={(e) => openReply(e.detail.id)}
+                    />
+                  </div>
+                  
+                  <!-- メタデータが見つからない場合の表示 -->
+                  <div slot="nodata" class="message-wrapper">
+                    <Post
+                      {event}
+                      metadata={undefined}
+                      on:reply={(e) => (replyId = e.detail.id)}
+                      on:openReply={(e) => openReply(e.detail.id)}
+                    />
+                  </div>
+                  
+                  <!-- エラー時の表示 -->
+                  <div slot="error" class="message-wrapper">
+                    <Post
+                      {event}
+                      metadata={undefined}
+                      on:reply={(e) => (replyId = e.detail.id)}
+                      on:openReply={(e) => openReply(e.detail.id)}
+                    />
+                  </div>
+                </Metadata>
+              {/each}
+            </div>
           {/each}
         </div>
       </div>
@@ -271,54 +357,56 @@
       <!-- メッセージ入力エリア -->
       {#key channel_id}
         <div class="input-area">
-          {#if isLoggedIn}
-            {#if replyId}
-              <div class="reply-indicator">
-                <Icon name="chat" size={16} />
-                <span class="reply-text">{postContent}</span>
-                <button 
-                  class="reply-close" 
-                  on:click={() => (replyId = null)} 
-                  type="button"
-                >
-                  <Icon name="x" size={14} />
-                </button>
-              </div>
-            {/if}
-            <div class="input-container">
-              <div class="message-input">
+          <div class="input-area-inner">
+            {#if isLoggedIn}
+              {#if replyId}
+                <div class="reply-indicator">
+                  <Icon name="chat" size={16} />
+                  <span class="reply-text">リプライ中: {replyId.slice(0, 10)}</span>
+                  <button 
+                    class="reply-close" 
+                    on:click={() => (replyId = null)} 
+                    type="button"
+                  >
+                    <Icon name="x" size={14} />
+                  </button>
+                </div>
+              {/if}
+              <div class="input-container">
                 <textarea 
                   bind:value={postContent} 
-                  on:keydown={submitKeydown} 
+                  bind:this={textareaElement}
+                  on:keydown={submitKeydown}
+                  on:input={autoResize}
                   placeholder="{channelName || 'チャンネル'}にメッセージを送信"
                   class="message-input"
                   rows="1"
                 ></textarea>
+                <button 
+                  class="send-button" 
+                  on:click={submit} 
+                  type="button" 
+                  disabled={submitDisabled}
+                >
+                  <Icon name="send" size={16} />
+                </button>
               </div>
-              <button 
-                class="send-button" 
-                on:click={submit} 
-                type="button" 
-                disabled={submitDisabled}
-              >
-                <Icon name="send" size={16} />
-              </button>
-            </div>
-          {:else}
-            <div class="login-prompt">
-              <div class="login-message">
-                <Icon name="key" size={20} />
-                <div class="login-text">
-                  <h3>ログインして参加する</h3>
-                  <p>メッセージを送信するには、秘密鍵の設定が必要です。</p>
+            {:else}
+              <div class="login-prompt">
+                <div class="login-message">
+                  <Icon name="key" size={20} />
+                  <div class="login-text">
+                    <h3>ログインして参加する</h3>
+                    <p>メッセージを送信するには、秘密鍵の設定が必要です。</p>
+                  </div>
                 </div>
+                <button class="login-button" on:click={() => settingsModal.set(true)}>
+                  <Icon name="key" size={16} />
+                  <span>キー管理を開く</span>
+                </button>
               </div>
-              <button class="login-button" on:click={() => settingsModal.set(true)}>
-                <Icon name="key" size={16} />
-                <span>キー管理を開く</span>
-              </button>
-            </div>
-          {/if}
+            {/if}
+          </div>
         </div>
       {/key}
       </UniqueEventList>
@@ -334,6 +422,7 @@
     height: 100vh;
     background: var(--chat-bg, #ffffff);
     overflow: hidden;
+    position: relative;
   }
 
   .loading-container {
@@ -479,14 +568,47 @@
   .messages-list {
     flex: 1;
     overflow-y: auto;
-    padding: 0 24px;
+    padding: 0;
     display: flex;
     flex-direction: column;
   }
 
+  .posts-container {
+    width: 100%;
+    padding: 0 16px;
+  }
+
+  @media (min-width: 768px) {
+    .posts-container {
+      padding: 0 24px;
+    }
+  }
+
   .message-wrapper {
-    border-bottom: 1px solid var(--message-border, #f0f0f0);
-    padding: 8px 16px;
+    margin-bottom: 8px;
+  }
+
+  /* 日付セパレーターのスタイル */
+  .date-separator {
+    display: flex;
+    align-items: center;
+    margin: 24px 0 16px 0;
+    gap: 12px;
+  }
+
+  .date-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border-color, #e3e5e8);
+  }
+
+  .date-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--secondary-text, #6c757d);
+    background: var(--chat-bg, #ffffff);
+    padding: 0 8px;
+    white-space: nowrap;
   }
 
   .input-area {
@@ -495,7 +617,29 @@
     z-index: 10;
     border-top: 1px solid var(--border-color, #e3e5e8);
     background: var(--chat-bg, #ffffff);
-    padding: 16px;
+    padding: 20px 0;
+    width: 100%;
+  }
+
+  .input-area-inner {
+    width: 100%;
+    padding: 0 24px;
+    box-sizing: border-box;
+  }
+
+  /* 非常に大きな画面での可読性向上 */
+  @media (min-width: 1600px) {
+    .input-area-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
+    
+    .posts-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
   }
 
   .reply-indicator {
@@ -536,30 +680,34 @@
 
   .input-container {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: flex-end;
   }
 
   .message-input {
     flex: 1;
-    border: 1px solid var(--border-color, #e3e5e8);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--input-bg, #ffffff);
-    padding: 12px 16px;
+    padding: 14px 16px;
     font-size: 1rem;
-    line-height: 1.4;
-    resize: vertical;
-    min-height: 44px;
-    max-height: 200px;
+    line-height: 1.5;
+    resize: none;
+    min-height: 52px;
+    max-height: 160px;
     outline: none;
     transition: all 0.2s;
-    color: var(--text-color, #1a1d21);
+    color: var(--text-color);
     font-family: inherit;
+    width: 100%;
+    max-width: none; /* グローバルスタイルのmax-width: 600pxを無効化 */
+    box-sizing: border-box;
+    overflow-y: auto;
   }
 
   .message-input:focus {
-    border-color: var(--primary-color, #059669);
-    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
   }
 
   .message-input::placeholder {
@@ -571,7 +719,7 @@
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 12px 20px;
+    padding: 14px 24px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
@@ -580,7 +728,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 44px;
+    min-height: 52px;
     box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
   }
 
@@ -603,7 +751,6 @@
     border-radius: 8px;
     padding: 20px;
     text-align: center;
-    margin: 16px;
   }
 
   .login-prompt h3 {
@@ -638,26 +785,25 @@
     box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     .channel-header {
       padding: 12px 16px;
     }
 
     .channel-title {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
 
-    .messages-list {
-      padding: 0 16px;
+    .posts-container {
+      padding: 0 12px;
     }
 
     .input-area {
-      padding: 12px 16px;
+      padding: 16px 0;
     }
 
-    .message-wrapper {
-      margin-bottom: 12px;
-      padding: 8px 0;
+    .input-area-inner {
+      padding: 0 16px;
     }
 
     .input-container {
@@ -665,19 +811,22 @@
     }
 
     .send-button {
-      min-width: 44px;
-      height: 44px;
+      min-width: 48px;
+      height: 48px;
       padding: 10px 12px;
     }
 
+    .message-input {
+      min-height: 48px;
+      padding: 12px 14px;
+    }
+
     .login-prompt {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 12px;
       padding: 16px;
     }
 
     .login-message {
+      display: flex;
       flex-direction: column;
       align-items: flex-start;
       gap: 8px;
@@ -704,6 +853,10 @@
       --hover-bg: #42464d;
       --disabled-bg: #72767d;
       --login-prompt-bg: #42464d;
+    }
+
+    .date-label {
+      background: var(--chat-bg, #36393f);
     }
   }
 </style>

@@ -11,6 +11,10 @@
   let loading = true;
   let showMenuButton = false;
   
+  onMount(() => {
+    showMenuButton = window.innerWidth < 1024;
+  });
+
   onMount(async () => {
     threads = await getThreadList();
     loading = false;
@@ -126,17 +130,21 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 24px;
-    background: var(--chat-bg, #ffffff);
+    padding: 0;
+    background: var(--chat-bg);
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
   }
 
   .home-header {
-    margin-bottom: 32px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-color, #e3e5e8);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--chat-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 24px;
+    margin-bottom: 0;
   }
 
   .header-title-section {
@@ -148,7 +156,7 @@
   .menu-btn {
     background: none;
     border: none;
-    color: var(--text-color, #1a1d21);
+    color: var(--text-color);
     cursor: pointer;
     padding: 8px;
     border-radius: 6px;
@@ -161,17 +169,7 @@
   }
 
   .menu-btn:hover {
-    background: var(--hover-bg, #f8f9fa);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .menu-btn {
-      color: var(--text-color, #dcddde);
-    }
-
-    .menu-btn:hover {
-      background: var(--hover-bg, #42464d);
-    }
+    background: var(--hover-bg);
   }
 
   .title-content {
@@ -179,22 +177,24 @@
   }
 
   .home-header h1 {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    margin: 0 0 8px 0;
-    color: var(--primary-text, #1a1d21);
+    margin: 0 0 4px 0;
+    color: var(--text-color);
   }
 
   .subtitle {
-    color: var(--secondary-text, #6c757d);
+    color: var(--text-color);
+    opacity: 0.7;
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
 
   .home-content {
     max-width: 1000px;
     width: 100%;
-    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 24px;
   }
 
   .loading-state {
@@ -202,15 +202,16 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 80px 20px;
+    padding: 60px 20px;
     text-align: center;
+    color: var(--text-color);
   }
 
   .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--border-color, #e3e5e8);
-    border-top: 3px solid var(--primary-color, #059669);
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 16px;
@@ -222,128 +223,110 @@
   }
 
   .welcome-section {
-    background: linear-gradient(135deg, var(--primary-color, #059669) 0%, var(--primary-color-dark, #047857) 100%);
-    color: white;
-    padding: 40px;
+    background: var(--hover-bg);
     border-radius: 12px;
+    padding: 32px;
     margin-bottom: 32px;
     text-align: center;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
   }
 
   .welcome-section h2 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: 600;
+    color: var(--text-color);
     margin: 0 0 16px 0;
   }
 
   .welcome-section p {
-    font-size: 1.1rem;
-    margin: 0 0 24px 0;
-    opacity: 0.9;
+    color: var(--text-color);
+    opacity: 0.8;
     line-height: 1.6;
+    margin: 0 0 24px 0;
   }
 
   .action-buttons {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     justify-content: center;
     flex-wrap: wrap;
   }
 
   .primary-btn, .secondary-btn {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
   }
 
   .primary-btn {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--primary-color);
     color: white;
-    backdrop-filter: blur(10px);
   }
 
   .primary-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: translateY(-2px);
+    background: var(--primary-color-hover);
+    transform: translateY(-1px);
   }
 
   .secondary-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    backdrop-filter: blur(10px);
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
   }
 
   .secondary-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
+    background: var(--hover-bg);
   }
 
   .recent-channels {
-    margin-bottom: 32px;
+    margin-top: 32px;
   }
 
   .recent-channels h3 {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 600;
+    color: var(--text-color);
     margin: 0 0 20px 0;
-    color: var(--primary-text, #1a1d21);
   }
 
   .channel-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
   }
 
   .channel-card {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e3e5e8);
-    border-radius: 12px;
-    padding: 20px;
+    background: var(--hover-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
   }
 
   .channel-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-    border-color: var(--primary-color, #059669);
-  }
-
-  .channel-header {
-    margin-bottom: 12px;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
   .channel-header h4 {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
-    margin: 0;
-    color: var(--primary-text, #1a1d21);
-    text-overflow: ellipsis;
+    color: var(--text-color);
+    margin: 0 0 12px 0;
     overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
-    flex: 1;
-    min-width: 0;
   }
 
   .channel-preview {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     min-height: 60px;
   }
 
@@ -352,34 +335,34 @@
     align-items: flex-start;
     gap: 8px;
     margin-bottom: 8px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
   .user-badge {
-    background: var(--user-badge-bg, #e3e5e8);
-    color: var(--user-badge-text, #1a1d21);
+    background: var(--primary-color);
+    color: white;
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     flex-shrink: 0;
   }
 
   .message-text {
-    color: var(--secondary-text, #6c757d);
+    color: var(--text-color);
+    opacity: 0.75;
     line-height: 1.4;
-    text-overflow: ellipsis;
     overflow: hidden;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   .no-messages {
-    color: var(--muted-text, #adb5bd);
+    color: var(--text-color);
+    opacity: 0.6;
+    font-size: 0.85rem;
     font-style: italic;
-    text-align: center;
-    padding: 20px 0;
   }
 
   .channel-footer {
@@ -387,9 +370,9 @@
     justify-content: space-between;
     align-items: center;
     font-size: 0.8rem;
-    color: var(--secondary-text, #6c757d);
+    color: var(--muted-text);
+    border-top: 1px solid var(--border-color);
     padding-top: 12px;
-    border-top: 1px solid var(--border-color, #e3e5e8);
   }
 
   .last-update {
@@ -398,145 +381,48 @@
 
   .no-channels {
     text-align: center;
-    padding: 60px 20px;
-    color: var(--secondary-text, #6c757d);
+    padding: 40px 20px;
+    color: var(--text-color);
+    opacity: 0.8;
   }
 
-  .no-channels p {
-    font-size: 1.1rem;
-    margin: 0;
-  }
-
-  @media (max-width: 768px) {
-    .home-container {
-      padding: 16px;
-      overflow-x: hidden;
-    }
-
+  /* レスポンシブ対応 */
+  @media (max-width: 767px) {
     .home-header {
-      width: 100%;
-      max-width: 100%;
-      overflow: hidden;
+      padding: 12px 16px;
     }
 
     .home-header h1 {
-      font-size: 1.5rem;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      font-size: 1.3rem;
     }
 
     .home-content {
-      width: 100%;
-      max-width: 100%;
+      padding: 16px;
     }
 
     .welcome-section {
-      padding: 20px;
-      margin-left: 0;
-      margin-right: 0;
-      width: 100%;
-      max-width: 100%;
+      padding: 24px 20px;
+      margin-bottom: 24px;
     }
 
     .welcome-section h2 {
-      font-size: 1.4rem;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      font-size: 1.3rem;
     }
 
-    .welcome-section p {
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+    .channel-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
     }
 
     .action-buttons {
       flex-direction: column;
       align-items: stretch;
-      width: 100%;
-    }
-
-    .primary-btn, .secondary-btn {
-      width: 100%;
-      max-width: 100%;
-      box-sizing: border-box;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .channel-grid {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto;
-      width: 100%;
-      max-width: 100%;
-      gap: 16px;
-    }
-
-    .channel-card {
-      padding: 16px;
-      margin: 0;
-      width: 100%;
-      max-width: 100%;
-    }
-
-    .channel-header h4 {
-      font-size: 1rem;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      white-space: normal;
-    }
-
-    .message-text {
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      white-space: normal;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .user-badge {
-      flex-shrink: 0;
-      max-width: 60px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .last-update {
-      word-wrap: break-word;
-      overflow-wrap: break-word;
     }
   }
 
-  @media (max-width: 480px) {
+  @media (min-width: 768px) and (max-width: 1023px) {
     .channel-grid {
-      grid-template-columns: 1fr;
-      gap: 12px;
-      padding: 0;
-    }
-
-    .channel-card {
-      padding: 12px;
-      border-radius: 8px;
-    }
-
-    .welcome-section {
-      padding: 16px;
-    }
-
-    .home-container {
-      padding: 12px;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .home-container {
-      --chat-bg: #36393f;
-      --primary-text: #dcddde;
-      --secondary-text: #b9bbbe;
-      --muted-text: #72767d;
-      --border-color: #42464d;
-      --card-bg: #2f3136;
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 </style>

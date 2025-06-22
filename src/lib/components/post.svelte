@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { parseContent, parseCreated } from "$lib/app";
+  import { parseContent, parseCreated, parseTimeOnly } from "$lib/app";
   import type { Nostr } from "nosvelte";
   import { createEventDispatcher } from "svelte";
+  import Icon from "./icons.svelte";
   const dispatch = createEventDispatcher();
 
   export let event: Nostr.Event<Nostr.Kind.Text>;
@@ -35,69 +36,214 @@
   }
 </script>
 
-<article>
-  <div class="flex">
+<article class="post">
+  <div class="post-header">
     <h3
-      style="border-left: 4px solid #{event.pubkey.slice(
-        0,
-        6,
-      )}; text-indent: 0.5rem;"
+      class="post-author"
+      style="border-left: 4px solid #{event.pubkey.slice(0, 6)};"
+      title="{getDisplayName()} (ID: {event.pubkey.slice(0, 10)})"
     >
-      <!-- んちゃんねるから{event.pubkey.slice(0, 6)}がお送りします -->
       {getDisplayName()}
     </h3>
-    <time data-time={parseCreated(event.created_at)}
-      >:{parseCreated(event.created_at)}</time
+    <time 
+      class="post-time" 
+      data-time={parseTimeOnly(event.created_at)}
+      title={parseCreated(event.created_at)}
     >
-    <aside>ID:{event.id.slice(0, 10)}</aside>
+      {parseTimeOnly(event.created_at)}
+    </time>
+    <aside class="post-id" title="投稿ID: {event.id}">
+      ID:{event.id.slice(0, 10)}
+    </aside>
   </div>
+  
   {#if reply && action}
-    <a href="javascript: void(0);" on:click={onClickParentId}
-      >{`>>${reply.slice(0, 10)}`}</a
-    >
+    <a href="javascript: void(0);" class="reply-link" on:click={onClickParentId}>
+      {`>>${reply.slice(0, 10)}`}
+    </a>
   {/if}
   {#if reply && !action}
-    {`>>${reply.slice(0, 10)}`}
+    <span class="reply-text">{`>>${reply.slice(0, 10)}`}</span>
   {/if}
-  <p>{parsed.text_without_urls}</p>
-  {#each parsed.other_urls as url}
-    <p>
-      <a href={url} target="_blank">
-        {url}
+  
+  <div class="post-content">
+    <p>{parsed.text_without_urls}</p>
+    {#each parsed.other_urls as url}
+      <p>
+        <a href={url} target="_blank" class="url-link">
+          {url}
+        </a>
+      </p>
+    {/each}
+    {#each parsed.image_urls as image}
+      <a href={image} target="_blank" class="image-link">
+        <img src={image} alt="" />
       </a>
-    </p>
-  {/each}
-  {#each parsed.image_urls as image}
-    <a href={image} target="_blank">
-      <img src={image} alt="" srcset="" />
-    </a>
-  {/each}
-  {#each parsed.twitter_urls as url}
-    <blockquote>
-      <a href={url}>{url}</a>
-    </blockquote>
-  {/each}
+    {/each}
+    {#each parsed.twitter_urls as url}
+      <p>
+        <a href={url} target="_blank" class="url-link">{url}</a>
+      </p>
+    {/each}
+  </div>
+  
   {#if action}
-    <div class="reply">
-      <button class="small" on:click={onClickReply(event.id)}>
-        <img src="/reply.svg" alt="" class="path" height="16px" /> リプライ</button
-      >
+    <div class="post-actions">
+      <button class="reply-btn small" on:click={onClickReply(event.id)}>
+        <Icon name="reply" size={16} />
+        リプライ
+      </button>
     </div>
   {/if}
 </article>
 
 <style>
-  h3 {
-    color: var(--primary-color, #059669);
-  }
-  .flex {
-    gap: 4px 8px;
-    margin-bottom: 8px;
-  }
-  article {
+  /* 投稿コンテナ：レスポンシブ対応 */
+  .post {
     padding: 16px 0;
+    border-bottom: 1px solid var(--border-color);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
-  .reply {
-    margin-top: 8px;
+
+  .post:last-child {
+    border-bottom: none;
+  }
+
+  /* ヘッダー：レスポンシブ対応 */
+  .post-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    .post-header {
+      gap: 8px;
+    }
+  }
+
+  .post-author {
+    color: var(--primary-color);
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    padding-left: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .post-time {
+    font-size: 0.85rem;
+    color: var(--muted-text);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .post-id {
+    font-size: 0.8rem;
+    color: var(--muted-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  @media (max-width: 767px) {
+    .post-id {
+      max-width: 80px;
+    }
+  }
+
+  /* コンテンツエリア */
+  .post-content {
+    margin: 8px 0;
+  }
+
+  .post-content p {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.5;
+    margin: 8px 0;
+  }
+
+  /* リプライリンク */
+  .reply-link, .reply-text {
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .reply-link:hover {
+    text-decoration: underline;
+  }
+
+  .reply-text {
+    color: var(--muted-text);
+  }
+
+  /* URL リンク */
+  .url-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    hyphens: none;
+    line-height: 1.4;
+  }
+
+  .url-link:hover {
+    text-decoration: underline;
+    color: var(--primary-color-hover);
+  }
+
+  /* 画像 */
+  .image-link {
+    display: block;
+    margin: 12px 0;
+    text-align: center;
+  }
+
+  .image-link img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* アクション */
+  .post-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .reply-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    background: none;
+    color: var(--text-color);
+    font-size: 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .reply-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
   }
 </style>

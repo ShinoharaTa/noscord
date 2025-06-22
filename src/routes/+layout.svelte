@@ -18,22 +18,30 @@
         });
     }
 
-    // 初期化時とリサイズ時のサイドバー状態管理
+    // レスポンシブ対応のサイドバー制御
     const handleResize = () => {
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 768) {
         sidebarOpen = true;
       } else {
         sidebarOpen = false;
       }
     };
 
-    handleResize(); // 初期化
+    // 初期状態を設定
+    handleResize();
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
     };
   });
+
+  // サイドバーオーバーレイのクリックで閉じる
+  const closeSidebar = () => {
+    if (window.innerWidth < 768) {
+      sidebarOpen = false;
+    }
+  };
 </script>
 
 <div class="app-layout">
@@ -41,14 +49,12 @@
   <ChatArea bind:sidebarOpen>
     <slot />
   </ChatArea>
-  
-  <!-- モバイル・タブレット用の閉じるボタン -->
-  {#if sidebarOpen && typeof window !== 'undefined' && window.innerWidth < 1024}
-    <button class="mobile-close-btn" on:click={() => sidebarOpen = false}>
-      <Icon name="x" size={24} />
-    </button>
-  {/if}
 </div>
+
+<!-- モバイル用オーバーレイ：統一された実装 -->
+{#if sidebarOpen && typeof window !== 'undefined' && window.innerWidth < 768}
+  <div class="sidebar-overlay" on:click={closeSidebar}></div>
+{/if}
 
 <!-- 設定モーダル -->
 <SettingsModal />
@@ -61,7 +67,7 @@
     position: relative;
   }
 
-  @media (max-width: 1023px) {
+  @media (max-width: 767px) {
     .app-layout {
       flex-direction: row;
     }
