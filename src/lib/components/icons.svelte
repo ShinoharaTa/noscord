@@ -9,7 +9,9 @@
     Menu, 
     X, 
     Settings,
-    Reply 
+    Reply,
+    Eye,
+    EyeOff
   } from 'lucide-svelte';
 
   export let name: string;
@@ -28,7 +30,9 @@
     menu: Menu,
     x: X,
     gear: Settings,
-    reply: Reply
+    reply: Reply,
+    eye: Eye,
+    'eye-off': EyeOff
   };
 
   $: IconComponent = iconMap[name as keyof typeof iconMap];

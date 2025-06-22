@@ -3,15 +3,23 @@
   import { settingsModal, getSecKey, saveToIdentifiedKey } from '$lib/store';
   import { generateSecretKey } from 'nostr-tools';
   import { bytesToHex } from '@noble/hashes/utils';
+  import { nsecEncode, decode } from 'nostr-tools/nip19';
   import Icon from './icons.svelte';
 
   let secretKey = '';
+  let showSecretKey = false;
 
   onMount(() => {
-    // 既存の秘密鍵を読み込み
+    // 既存の秘密鍵を読み込み（Hex形式をnsec1形式に変換）
     const existingKey = getSecKey();
     if (existingKey) {
-      secretKey = existingKey;
+      try {
+        // Hex形式からnsec1形式に変換
+        secretKey = nsecEncode(existingKey);
+      } catch (error) {
+        // 変換に失敗した場合はそのまま表示
+        secretKey = existingKey;
+      }
     }
 
     // Escキーでモーダルを閉じる
@@ -40,17 +48,36 @@
   }
 
   const saveSecretKey = () => {
-    if (secretKey.length === 64) {
-      saveToIdentifiedKey(secretKey);
+    try {
+      let hexKey = '';
+      
+      if (secretKey.startsWith('nsec1')) {
+        // nsec1形式の場合はHex形式に変換
+        hexKey = decode(secretKey).data;
+      } else if (secretKey.length === 64) {
+        // 既にHex形式の場合はそのまま使用
+        hexKey = secretKey;
+      } else {
+        alert('秘密鍵はnsec1形式または64文字のHex形式で入力してください');
+        return;
+      }
+
+      saveToIdentifiedKey(hexKey);
       alert('秘密鍵を保存しました');
-    } else {
-      alert('秘密鍵は64文字のHex形式で入力してください');
+    } catch (error) {
+      alert('秘密鍵の形式が正しくありません。nsec1形式または64文字のHex形式で入力してください');
     }
   };
 
   const generateNewKey = () => {
     const secretKeyBytes = generateSecretKey();
-    secretKey = bytesToHex(secretKeyBytes);
+    const hexKey = bytesToHex(secretKeyBytes);
+    // 新しく生成した鍵をnsec1形式で表示
+    secretKey = nsecEncode(hexKey);
+  };
+
+  const toggleSecretKeyVisibility = () => {
+    showSecretKey = !showSecretKey;
   };
 </script>
 
@@ -76,15 +103,35 @@
           
           <div class="settings-form">
             <div class="form-group">
-              <label for="secret-key">秘密鍵 (Hex形式)</label>
-              <textarea 
-                id="secret-key" 
-                bind:value={secretKey}
-                placeholder="秘密鍵を入力してください..."
-                rows="3"
-                class="form-textarea"
-              ></textarea>
-              <p class="form-help">64文字のHex形式で入力してください。</p>
+              <label for="secret-key">秘密鍵 (nsec1形式)</label>
+              <div class="password-input-container">
+                {#if showSecretKey}
+                  <input
+                    id="secret-key"
+                    type="text"
+                    bind:value={secretKey}
+                    placeholder="nsec1... または64文字のHex形式"
+                    class="form-input password-input"
+                  />
+                {:else}
+                  <input
+                    id="secret-key"
+                    type="password"
+                    bind:value={secretKey}
+                    placeholder="nsec1... または64文字のHex形式"
+                    class="form-input password-input"
+                  />
+                {/if}
+                <button
+                  type="button"
+                  class="password-toggle"
+                  on:click={toggleSecretKeyVisibility}
+                  title={showSecretKey ? '秘密鍵を非表示' : '秘密鍵を表示'}
+                >
+                  <Icon name={showSecretKey ? 'eye-off' : 'eye'} size={16} />
+                </button>
+              </div>
+              <p class="form-help">nsec1形式（推奨）または64文字のHex形式で入力してください。</p>
             </div>
             
             <div class="form-actions">
@@ -282,7 +329,7 @@
     font-size: 0.9rem;
   }
 
-  .form-textarea {
+  .form-input {
     width: 100%;
     padding: 12px 16px;
     border: 1px solid var(--border-color, #e3e5e8);
@@ -291,12 +338,11 @@
     color: var(--text-color, #1a1d21);
     font-size: 0.9rem;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    resize: vertical;
-    min-height: 80px;
     transition: border-color 0.2s;
+    height: 44px;
   }
 
-  .form-textarea:focus {
+  .form-input:focus {
     outline: none;
     border-color: var(--primary-color, #059669);
   }
@@ -305,6 +351,41 @@
     margin: 8px 0 0 0;
     font-size: 0.8rem;
     color: var(--secondary-text, #6c757d);
+  }
+
+  .password-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .password-input {
+    padding-right: 48px;
+  }
+
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--secondary-text, #6c757d);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .password-toggle:hover {
+    background: var(--hover-bg, #f8f9fa);
+    color: var(--text-color, #1a1d21);
+  }
+
+  .password-toggle:focus {
+    outline: 2px solid var(--primary-color, #059669);
+    outline-offset: 2px;
   }
 
   .form-actions {

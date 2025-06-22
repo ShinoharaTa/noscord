@@ -212,6 +212,10 @@
               <div class="color-swatch text-secondary"></div>
               <span>Secondary Text: #6c757d</span>
             </div>
+            <div class="color-item">
+              <div class="color-swatch text-muted"></div>
+              <span>Muted Text: #adb5bd</span>
+            </div>
           </div>
         </div>
         
@@ -220,11 +224,55 @@
           <div class="color-items">
             <div class="color-item">
               <div class="color-swatch bg-primary"></div>
-              <span>Background: #ffffff</span>
+              <span>Primary BG: #ffffff</span>
             </div>
             <div class="color-item">
               <div class="color-swatch bg-secondary"></div>
               <span>Secondary BG: #f8f9fa</span>
+            </div>
+            <div class="color-item">
+              <div class="color-swatch bg-card"></div>
+              <span>Card BG: #ffffff</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="color-group">
+          <h3>状態カラー</h3>
+          <div class="color-items">
+            <div class="color-item">
+              <div class="color-swatch success"></div>
+              <span>Success: #059669</span>
+            </div>
+            <div class="color-item">
+              <div class="color-swatch error"></div>
+              <span>Error: #dc3545</span>
+            </div>
+            <div class="color-item">
+              <div class="color-swatch warning"></div>
+              <span>Warning: #ffc107</span>
+            </div>
+            <div class="color-item">
+              <div class="color-swatch info"></div>
+              <span>Info: #0dcaf0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="color-group">
+          <h3>ボーダー・その他</h3>
+          <div class="color-items">
+            <div class="color-item">
+              <div class="color-swatch border"></div>
+              <span>Border: #e3e5e8</span>
+            </div>
+            <div class="color-item">
+              <div class="color-swatch disabled"></div>
+              <span>Disabled: #adb5bd</span>
+            </div>
+            <div class="color-item">
+              <div class="color-swatch hover"></div>
+              <span>Hover BG: #f8f9fa</span>
             </div>
           </div>
         </div>
@@ -379,8 +427,8 @@
 
 <style>
   .design-page {
-    background: var(--bg-primary, #ffffff);
-    color: var(--text-color, #1a1d21);
+    background: var(--bg-primary);
+    color: var(--text-color);
     width: 100%;
     height: auto;
   }
@@ -390,7 +438,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 0;
-    border-bottom: 1px solid var(--border-color, #e3e5e8);
+    border-bottom: 1px solid var(--border-color);
     margin-bottom: 24px;
   }
 
@@ -399,8 +447,8 @@
     align-items: center;
     gap: 8px;
     background: none;
-    border: 1px solid var(--border-color, #e3e5e8);
-    color: var(--text-color, #1a1d21);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
     padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -409,14 +457,14 @@
   }
 
   .nav-back:hover {
-    background: var(--hover-bg, #f8f9fa);
-    border-color: var(--primary-color, #059669);
+    background: var(--hover-bg);
+    border-color: var(--primary-color);
   }
 
   .nav-title {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
   }
 
   .nav-actions {
@@ -425,7 +473,7 @@
   }
 
   .nav-link {
-    color: var(--primary-color, #059669);
+    color: var(--primary-color);
     text-decoration: none;
     font-size: 0.875rem;
     font-weight: 500;
@@ -435,7 +483,7 @@
   }
 
   .nav-link:hover {
-    background: var(--hover-bg, #f8f9fa);
+    background: var(--hover-bg);
   }
 
   .design-container {
@@ -448,18 +496,18 @@
     text-align: center;
     margin-bottom: 48px;
     padding-bottom: 24px;
-    border-bottom: 2px solid var(--border-color, #e3e5e8);
+    border-bottom: 2px solid var(--border-color);
   }
 
   .design-header h1 {
     font-size: 2.5rem;
     margin-bottom: 12px;
-    color: var(--primary-color, #059669);
+    color: var(--primary-color);
   }
 
   .design-header p {
     font-size: 1.1rem;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
   }
 
   .design-section {
@@ -469,8 +517,8 @@
   .design-section h2 {
     font-size: 1.75rem;
     margin-bottom: 24px;
-    color: var(--primary-text, #1a1d21);
-    border-left: 4px solid var(--primary-color, #059669);
+    color: var(--primary-text);
+    border-left: 4px solid var(--primary-color);
     padding-left: 16px;
   }
 
@@ -482,15 +530,15 @@
   }
 
   .icon-group {
-    background: var(--bg-secondary, #f8f9fa);
+    background: var(--bg-secondary);
     padding: 24px;
     border-radius: 12px;
-    border: 1px solid var(--border-color, #e3e5e8);
+    border: 1px solid var(--border-color);
   }
 
   .icon-group h3 {
     margin-bottom: 16px;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
   }
 
   .size-selector {
@@ -502,9 +550,10 @@
 
   .size-selector select {
     padding: 4px 8px;
-    border: 1px solid var(--border-color, #e3e5e8);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: white;
+    background: var(--input-bg);
+    color: var(--text-color);
   }
 
   .icon-category {
@@ -513,7 +562,7 @@
 
   .icon-category h4 {
     margin-bottom: 12px;
-    color: var(--primary-color, #059669);
+    color: var(--primary-color);
     font-size: 1rem;
     font-weight: 600;
   }
@@ -529,15 +578,15 @@
     flex-direction: column;
     align-items: center;
     padding: 12px;
-    background: white;
-    border: 1px solid var(--border-color, #e3e5e8);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     transition: all 0.2s;
   }
 
   .icon-item:hover {
-    border-color: var(--primary-color, #059669);
-    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px var(--primary-color-alpha);
   }
 
   .icon-display {
@@ -557,13 +606,13 @@
 
   .icon-name {
     font-size: 0.75rem;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
     font-family: monospace;
   }
 
   .icon-label {
     font-size: 0.875rem;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
     margin-top: 2px;
   }
 
@@ -576,7 +625,7 @@
 
   .color-group h3 {
     margin-bottom: 16px;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
   }
 
   .color-items {
@@ -595,15 +644,24 @@
     width: 48px;
     height: 48px;
     border-radius: 8px;
-    border: 1px solid var(--border-color, #e3e5e8);
+    border: 1px solid var(--border-color);
   }
 
   .color-swatch.primary { background: #059669; }
   .color-swatch.primary-hover { background: #047857; }
   .color-swatch.text-primary { background: #1a1d21; }
   .color-swatch.text-secondary { background: #6c757d; }
+  .color-swatch.text-muted { background: #adb5bd; }
   .color-swatch.bg-primary { background: #ffffff; }
   .color-swatch.bg-secondary { background: #f8f9fa; }
+  .color-swatch.bg-card { background: #ffffff; }
+  .color-swatch.success { background: #059669; }
+  .color-swatch.error { background: #dc3545; }
+  .color-swatch.warning { background: #ffc107; }
+  .color-swatch.info { background: #0dcaf0; }
+  .color-swatch.border { background: #e3e5e8; }
+  .color-swatch.disabled { background: #adb5bd; }
+  .color-swatch.hover { background: #f8f9fa; }
 
   /* コンポーネント */
   .component-group {
@@ -612,7 +670,7 @@
 
   .component-group h3 {
     margin-bottom: 16px;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
   }
 
   .component-samples {
@@ -626,14 +684,14 @@
     flex-direction: column;
     gap: 8px;
     padding: 16px;
-    background: var(--bg-secondary, #f8f9fa);
+    background: var(--bg-secondary);
     border-radius: 8px;
-    border: 1px solid var(--border-color, #e3e5e8);
+    border: 1px solid var(--border-color);
   }
 
   .component-item label {
     font-size: 0.875rem;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
     font-weight: 500;
   }
 
@@ -652,59 +710,61 @@
   }
 
   .btn-primary {
-    background: var(--primary-color, #059669);
+    background: var(--primary-color);
     color: white;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
   }
 
   .btn-primary:hover {
-    background: var(--primary-color-hover, #047857);
+    background: var(--primary-color-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
   }
 
   .btn-secondary {
-    background: var(--bg-secondary, #f8f9fa);
-    color: var(--primary-text, #1a1d21);
-    border: 1px solid var(--border-color, #e3e5e8);
+    background: var(--bg-secondary);
+    color: var(--primary-text);
+    border: 1px solid var(--border-color);
   }
 
   .btn-secondary:hover {
-    background: #e9ecef;
+    background: var(--hover-bg);
+    border-color: var(--primary-color);
   }
 
   .btn-danger {
-    background: #dc3545;
+    background: var(--error-color);
     color: white;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
   }
 
   .btn-danger:hover {
     background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
   }
 
   .btn-disabled {
-    background: var(--disabled-bg, #adb5bd);
-    color: var(--disabled-text, #6c757d);
+    background: var(--disabled-bg);
+    color: var(--disabled-text);
     cursor: not-allowed;
   }
 
   /* フォーム */
   .form-input {
     padding: 8px 12px;
-    border: 1px solid var(--border-color, #e3e5e8);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     font-size: 0.875rem;
-    background: white;
+    background: var(--input-bg);
+    color: var(--text-color);
     transition: border-color 0.2s;
   }
 
   .form-input:focus {
     outline: none;
-    border-color: var(--primary-color, #059669);
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
-  }
-
-  .form-input:disabled {
-    background: var(--disabled-bg, #f8f9fa);
-    color: var(--disabled-text, #6c757d);
-    cursor: not-allowed;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-color-alpha);
   }
 
   /* タイポグラフィ */
@@ -725,76 +785,74 @@
   .typography-samples {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    margin-bottom: 32px;
+    gap: 24px;
   }
 
   .typography-item {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 20px;
-    background: var(--bg-secondary, #f8f9fa);
-    border-radius: 8px;
-    border: 1px solid var(--border-color, #e3e5e8);
   }
 
-  .typography-info {
-    font-size: var(--font-size-xs);
-    color: var(--secondary-text, #6c757d);
-    font-family: 'Courier New', monospace;
-    background: rgba(0, 0, 0, 0.05);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: var(--font-weight-normal);
+  .typography-item label {
+    font-size: 0.875rem;
+    color: var(--secondary-text);
+    font-weight: 500;
   }
 
-  .font-weights {
-    margin-top: 32px;
+  .typography-sample {
+    color: var(--text-color);
   }
 
-  .font-weights h3 {
-    margin-bottom: 16px;
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
+  .typography-sample.h1 {
+    font-size: 2rem;
+    font-weight: 700;
   }
 
-  .weight-samples {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+  .typography-sample.h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
   }
 
-  .weight-item {
-    padding: 12px 16px;
-    background: var(--bg-secondary, #f8f9fa);
-    border-radius: 6px;
-    border: 1px solid var(--border-color, #e3e5e8);
+  .typography-sample.h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
   }
 
-  .weight-item span {
-    font-size: var(--font-size-base);
+  .typography-sample.body {
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  .typography-sample.small {
+    font-size: 0.875rem;
+    font-weight: 400;
   }
 
   /* スペーシング */
   .spacing-samples {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 16px;
   }
 
   .spacing-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
   }
 
   .spacing-demo {
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 500;
-    color: #1976d2;
-    border: 1px solid #bbdefb;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    background: var(--primary-color-alpha);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* レスポンシブ */

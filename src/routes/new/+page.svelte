@@ -161,7 +161,7 @@
     max-width: 600px;
     margin: 0 auto;
     padding: 40px 24px;
-    background: var(--chat-bg, #ffffff);
+    background: var(--chat-bg);
     min-height: 100vh;
   }
 
@@ -174,18 +174,18 @@
     font-size: 2rem;
     font-weight: 700;
     margin: 0 0 8px 0;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
   }
 
   .subtitle {
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
     margin: 0;
     font-size: 1.1rem;
   }
 
   .new-channel-form {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e3e5e8);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 32px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -198,35 +198,35 @@
   .form-label {
     display: block;
     font-weight: 600;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
     margin-bottom: 8px;
     font-size: 1rem;
   }
 
   .required {
-    color: var(--error-color, #dc3545);
+    color: var(--error-color);
   }
 
   .form-input, .form-textarea {
     width: 100%;
     padding: 12px 16px;
-    border: 1px solid var(--border-color, #e3e5e8);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    background: var(--input-bg, #ffffff);
-    color: var(--text-color, #1a1d21);
+    background: var(--input-bg);
+    color: var(--text-color);
     font-size: 1rem;
     line-height: 1.4;
     transition: border-color 0.2s, box-shadow 0.2s;
     font-family: inherit;
   }
 
-  .form-input:focus {
-    border-color: var(--primary-color, #059669);
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+  .form-input:focus, .form-textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-color-alpha);
   }
 
-  .form-input:disabled {
-    background: var(--disabled-bg, #f8f9fa);
+  .form-input:disabled, .form-textarea:disabled {
+    background: var(--disabled-bg);
     cursor: not-allowed;
   }
 
@@ -239,7 +239,7 @@
     display: block;
     margin-top: 6px;
     font-size: 0.9rem;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
     line-height: 1.3;
   }
 
@@ -255,16 +255,16 @@
   .loading-spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid var(--border-color, #e3e5e8);
-    border-top: 3px solid var(--primary-color, #059669);
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 16px;
   }
 
   .login-required {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e3e5e8);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 40px 32px;
     text-align: center;
@@ -274,18 +274,19 @@
   .login-icon {
     font-size: 4rem;
     margin-bottom: 16px;
+    color: var(--primary-color);
   }
 
   .login-required h2 {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0 0 16px 0;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
   }
 
   .login-required p {
     font-size: 1.1rem;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
     margin: 0 0 24px 0;
     line-height: 1.5;
   }
@@ -303,8 +304,8 @@
 
   .login-help {
     padding: 20px;
-    background: var(--info-bg, #e3f2fd);
-    border: 1px solid var(--info-border, #bbdefb);
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
     border-radius: 8px;
     text-align: left;
   }
@@ -312,7 +313,7 @@
   .login-help p {
     margin: 0;
     font-size: 0.9rem;
-    color: var(--info-text, #1565c0);
+    color: var(--info-text);
     line-height: 1.5;
   }
 
@@ -338,27 +339,31 @@
   }
 
   .btn-primary {
-    background: var(--primary-color, #059669);
+    background: var(--primary-color);
     color: white;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
   }
 
   .btn-primary:hover:not(:disabled) {
-        background: var(--primary-color-hover, #047857);
+    background: var(--primary-color-hover);
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
   }
 
   .btn-secondary {
-    background: var(--secondary-bg, #6c757d);
-    color: white;
+    background: var(--bg-secondary);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: var(--secondary-bg-hover, #5a6169);
+    background: var(--hover-bg);
+    border-color: var(--primary-color);
     transform: translateY(-1px);
   }
 
   .btn:disabled {
-    background: var(--disabled-bg, #adb5bd);
+    background: var(--disabled-bg);
     cursor: not-allowed;
     transform: none;
   }
@@ -380,15 +385,15 @@
   .form-notice {
     margin-top: 24px;
     padding: 16px;
-    background: var(--info-bg, #e3f2fd);
-    border: 1px solid var(--info-border, #bbdefb);
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
     border-radius: 8px;
   }
 
   .form-notice p {
     margin: 0;
     font-size: 0.9rem;
-    color: var(--info-text, #1565c0);
+    color: var(--info-text);
     line-height: 1.4;
   }
 

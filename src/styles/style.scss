@@ -1,14 +1,53 @@
 :root {
-  /* 基本色 */
-  --background: #eee;
-  --text: #000;
-  --pathColor: invert(0%);
-  --border: 1px solid #888;
-  --border-color: #888;
+  /* === 基本カラーシステム === */
   
   /* プライマリカラー */
   --primary-color: #059669;
   --primary-color-hover: #047857;
+  --primary-color-alpha: rgba(5, 150, 105, 0.1);
+  
+  /* テキストカラー */
+  --primary-text: #1a1d21;
+  --secondary-text: #6c757d;
+  --muted-text: #adb5bd;
+  --text-color: #1a1d21;
+  
+  /* 背景カラー */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --chat-bg: #ffffff;
+  --sidebar-bg: #f8f9fa;
+  --card-bg: #ffffff;
+  --input-bg: #ffffff;
+  --hover-bg: #f8f9fa;
+  
+  /* ボーダー・区切り線 */
+  --border-color: #e3e5e8;
+  --border: 1px solid #e3e5e8;
+  
+  /* 状態カラー */
+  --success-color: #059669;
+  --error-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #0dcaf0;
+  
+  /* 特殊用途 */
+  --disabled-bg: #adb5bd;
+  --disabled-text: #6c757d;
+  --placeholder-color: #adb5bd;
+  --reply-bg: #f8f9fa;
+  --login-prompt-bg: #f8f9fa;
+  --info-bg: #e3f2fd;
+  --info-border: #bbdefb;
+  --info-text: #1565c0;
+  --warning-bg: #fff3cd;
+  --warning-border: #ffeaa7;
+  --warning-text: #856404;
+  
+  /* サイドバー専用 */
+  --sidebar-text: #333333;
+  --sidebar-muted: #6c757d;
+  --sidebar-width: 300px;
   
   /* フォント */
   --font-family: "Noto Sans JP", "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -32,41 +71,71 @@
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.75;
   
-  /* サイドバー */
-  --sidebar-bg: #f8f9fa;
-  --sidebar-text: #333;
-  --sidebar-muted: #6c757d;
-  --sidebar-width: 300px;
-  
-  /* チャット */
-  --chat-bg: #ffffff;
-  --text-color: #1a1d21;
-  --hover-bg: #f5f5f5;
-  --muted-text: #4a5568;
-  
   /* ブレークポイント */
   --mobile-breakpoint: 768px;
   --tablet-breakpoint: 1024px;
+  
+  /* 旧変数（後方互換性） */
+  --background: #ffffff;
+  --text: #1a1d21;
+  --pathColor: invert(0%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #222;
-    --text: #fff;
-    --pathColor: invert(100%);
-    --border: 1px solid #888;
-    --border-color: #42464d;
+    /* === ダークモードカラーシステム === */
     
-    /* サイドバー（ダーク） */
-    --sidebar-bg: #1a1d21;
-    --sidebar-text: #fff;
-    --sidebar-muted: #b3b3b3;
+    /* プライマリカラー（ダークモードでも同じ） */
+    --primary-color: #059669;
+    --primary-color-hover: #047857;
+    --primary-color-alpha: rgba(5, 150, 105, 0.2);
     
-    /* チャット（ダーク） */
+    /* テキストカラー */
+    --primary-text: #dcddde;
+    --secondary-text: #b9bbbe;
+    --muted-text: #72767d;
+    --text-color: #dcddde;
+    
+    /* 背景カラー */
+    --bg-primary: #36393f;
+    --bg-secondary: #2f3136;
     --chat-bg: #36393f;
-    --text-color: #ffffff;
+    --sidebar-bg: #2f3136;
+    --card-bg: #2f3136;
+    --input-bg: #40444b;
     --hover-bg: #42464d;
-    --muted-text: #cbd5e0;
+    
+    /* ボーダー・区切り線 */
+    --border-color: #42464d;
+    --border: 1px solid #42464d;
+    
+    /* 状態カラー（ダークモードでも視認性重視） */
+    --success-color: #00d26a;
+    --error-color: #f04747;
+    --warning-color: #faa61a;
+    --info-color: #00aff4;
+    
+    /* 特殊用途 */
+    --disabled-bg: #72767d;
+    --disabled-text: #72767d;
+    --placeholder-color: #72767d;
+    --reply-bg: #42464d;
+    --login-prompt-bg: #42464d;
+    --info-bg: #2f3136;
+    --info-border: #42464d;
+    --info-text: #b9bbbe;
+    --warning-bg: #2f3136;
+    --warning-border: #42464d;
+    --warning-text: #b9bbbe;
+    
+    /* サイドバー専用 */
+    --sidebar-text: #dcddde;
+    --sidebar-muted: #b9bbbe;
+    
+    /* 旧変数（後方互換性） */
+    --background: #36393f;
+    --text: #dcddde;
+    --pathColor: invert(100%);
   }
 
   a {

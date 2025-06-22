@@ -420,7 +420,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: var(--chat-bg, #ffffff);
+    background: var(--chat-bg);
     overflow: hidden;
     position: relative;
   }
@@ -432,6 +432,7 @@
     justify-content: center;
     padding: 60px 20px;
     text-align: center;
+    color: var(--secondary-text);
   }
 
   .no-messages-container {
@@ -441,14 +442,14 @@
     justify-content: center;
     padding: 60px 20px;
     text-align: center;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
   }
 
   .loading-spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid var(--border-color, #e3e5e8);
-    border-top: 3px solid var(--primary-color, #059669);
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 16px;
@@ -462,7 +463,7 @@
     margin: 8px;
     border-radius: 50%;
     border: 3px solid transparent;
-    border-top-color: var(--primary-color, #059669);
+    border-top-color: var(--primary-color);
     animation: spin 1s linear infinite;
   }
 
@@ -474,11 +475,11 @@
   .error-container {
     padding: 40px 20px;
     text-align: center;
-    color: var(--error-color, #dc3545);
+    color: var(--error-color);
   }
 
   .error-message {
-    color: var(--error-color, #dc3545);
+    color: var(--error-color);
     font-weight: 500;
   }
 
@@ -486,8 +487,8 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    border-bottom: 1px solid var(--border-color, #e3e5e8);
-    background: var(--chat-bg, #ffffff);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--chat-bg);
     padding: 12px 16px;
     display: flex;
     align-items: center;
@@ -506,7 +507,7 @@
   .menu-btn {
     background: none;
     border: none;
-    color: var(--text-color, #1a1d21);
+    color: var(--text-color);
     cursor: pointer;
     padding: 8px;
     border-radius: 4px;
@@ -517,13 +518,13 @@
   }
 
   .menu-btn:hover {
-    background: var(--hover-bg, #f8f9fa);
+    background: var(--hover-bg);
   }
 
   .channel-title {
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -538,10 +539,10 @@
   }
 
   .limit-selector {
-    border: 1px solid var(--border-color, #e3e5e8);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: var(--input-bg, #ffffff);
-    color: var(--text-color, #1a1d21);
+    background: var(--input-bg);
+    color: var(--text-color);
     padding: 6px 8px;
     font-size: 0.9rem;
     cursor: pointer;
@@ -550,12 +551,12 @@
   }
 
   .limit-selector:focus {
-    border-color: var(--primary-color, #059669);
-    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color-alpha);
   }
 
   .limit-selector:hover {
-    border-color: var(--primary-color, #059669);
+    border-color: var(--primary-color);
   }
 
   .messages-container {
@@ -599,14 +600,14 @@
   .date-line {
     flex: 1;
     height: 1px;
-    background: var(--border-color, #e3e5e8);
+    background: var(--border-color);
   }
 
   .date-label {
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--secondary-text, #6c757d);
-    background: var(--chat-bg, #ffffff);
+    color: var(--secondary-text);
+    background: var(--chat-bg);
     padding: 0 8px;
     white-space: nowrap;
   }
@@ -615,8 +616,8 @@
     position: sticky;
     bottom: 0;
     z-index: 10;
-    border-top: 1px solid var(--border-color, #e3e5e8);
-    background: var(--chat-bg, #ffffff);
+    border-top: 1px solid var(--border-color);
+    background: var(--chat-bg);
     padding: 20px 0;
     width: 100%;
   }
@@ -645,11 +646,11 @@
   .reply-indicator {
     margin-bottom: 8px;
     padding: 8px 12px;
-    background: var(--reply-bg, #f8f9fa);
-    border: 1px solid var(--border-color, #e3e5e8);
+    background: var(--reply-bg);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 0.9rem;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -660,13 +661,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
   }
 
   .reply-close {
     background: none;
     border: none;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
     cursor: pointer;
     padding: 4px;
     border-radius: 2px;
@@ -675,7 +676,7 @@
   }
 
   .reply-close:hover {
-    background: var(--hover-bg, #e9ecef);
+    background: var(--hover-bg);
   }
 
   .input-container {
@@ -688,7 +689,7 @@
     flex: 1;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    background: var(--input-bg, #ffffff);
+    background: var(--input-bg);
     padding: 14px 16px;
     font-size: 1rem;
     line-height: 1.5;
@@ -707,15 +708,15 @@
 
   .message-input:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    box-shadow: 0 0 0 3px var(--primary-color-alpha);
   }
 
   .message-input::placeholder {
-    color: var(--placeholder-color, #adb5bd);
+    color: var(--placeholder-color);
   }
 
   .send-button {
-    background: var(--primary-color, #059669);
+    background: var(--primary-color);
     color: white;
     border: none;
     border-radius: 8px;
@@ -733,21 +734,21 @@
   }
 
   .send-button:hover:not(:disabled) {
-    background: var(--primary-color-hover, #047857);
+    background: var(--primary-color-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
   }
 
   .send-button:disabled {
-    background: var(--disabled-bg, #adb5bd);
+    background: var(--disabled-bg);
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
   }
 
   .login-prompt {
-    background: var(--login-prompt-bg, #f8f9fa);
-    border: 1px solid var(--border-color, #e3e5e8);
+    background: var(--login-prompt-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 20px;
     text-align: center;
@@ -757,17 +758,17 @@
     margin: 0 0 8px 0;
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--primary-text, #1a1d21);
+    color: var(--primary-text);
   }
 
   .login-prompt p {
     margin: 0 0 16px 0;
-    color: var(--secondary-text, #6c757d);
+    color: var(--secondary-text);
     line-height: 1.5;
   }
 
   .login-button {
-    background: var(--primary-color, #059669);
+    background: var(--primary-color);
     color: white;
     border: none;
     border-radius: 6px;
@@ -780,7 +781,7 @@
   }
 
   .login-button:hover {
-    background: var(--primary-color-hover, #047857);
+    background: var(--primary-color-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
   }
@@ -839,24 +840,5 @@
     }
   }
 
-  @media (prefers-color-scheme: dark) {
-    .chat-channel {
-      --chat-bg: #36393f;
-      --primary-text: #dcddde;
-      --secondary-text: #b9bbbe;
-      --text-color: #dcddde;
-      --border-color: #42464d;
-      --input-bg: #40444b;
-      --reply-bg: #42464d;
-      --message-border: #42464d;
-      --placeholder-color: #72767d;
-      --hover-bg: #42464d;
-      --disabled-bg: #72767d;
-      --login-prompt-bg: #42464d;
-    }
-
-    .date-label {
-      background: var(--chat-bg, #36393f);
-    }
-  }
+  /* ダークモード対応は不要（CSS変数で自動対応） */
 </style>

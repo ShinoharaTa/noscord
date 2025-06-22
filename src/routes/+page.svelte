@@ -184,8 +184,7 @@
   }
 
   .subtitle {
-    color: var(--text-color);
-    opacity: 0.7;
+    color: var(--secondary-text);
     margin: 0;
     font-size: 0.9rem;
   }
@@ -223,7 +222,8 @@
   }
 
   .welcome-section {
-    background: var(--hover-bg);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 32px;
     margin-bottom: 32px;
@@ -233,13 +233,12 @@
   .welcome-section h2 {
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--text-color);
+    color: var(--primary-text);
     margin: 0 0 16px 0;
   }
 
   .welcome-section p {
-    color: var(--text-color);
-    opacity: 0.8;
+    color: var(--secondary-text);
     line-height: 1.6;
     margin: 0 0 24px 0;
   }
@@ -267,11 +266,13 @@
   .primary-btn {
     background: var(--primary-color);
     color: white;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
   }
 
   .primary-btn:hover {
     background: var(--primary-color-hover);
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
   }
 
   .secondary-btn {
@@ -282,6 +283,7 @@
 
   .secondary-btn:hover {
     background: var(--hover-bg);
+    border-color: var(--primary-color);
   }
 
   .recent-channels {
@@ -291,7 +293,7 @@
   .recent-channels h3 {
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--text-color);
+    color: var(--primary-text);
     margin: 0 0 20px 0;
   }
 
@@ -302,23 +304,25 @@
   }
 
   .channel-card {
-    background: var(--hover-bg);
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
     cursor: pointer;
     transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
   .channel-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
   }
 
   .channel-header h4 {
     font-size: 1rem;
     font-weight: 600;
-    color: var(--text-color);
+    color: var(--primary-text);
     margin: 0 0 12px 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -359,8 +363,7 @@
   }
 
   .no-messages {
-    color: var(--text-color);
-    opacity: 0.6;
+    color: var(--secondary-text);
     font-size: 0.85rem;
     font-style: italic;
   }
@@ -370,7 +373,7 @@
     justify-content: space-between;
     align-items: center;
     font-size: 0.8rem;
-    color: var(--muted-text);
+    color: var(--secondary-text);
     border-top: 1px solid var(--border-color);
     padding-top: 12px;
   }
@@ -382,8 +385,7 @@
   .no-channels {
     text-align: center;
     padding: 40px 20px;
-    color: var(--text-color);
-    opacity: 0.8;
+    color: var(--secondary-text);
   }
 
   /* レスポンシブ対応 */
