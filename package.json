@@ -34,7 +34,7 @@
     "@nostr-fetch/adapter-nostr-tools": "^0.15.1",
     "date-fns": "^2.30.0",
     "nostr-fetch": "^0.15.1",
-    "nostr-tools": "^1.11.1",
+    "nostr-tools": "^2.15.0",
     "nosvelte": "^0.1.3",
     "websocket-polyfill": "^0.0.3"
   }

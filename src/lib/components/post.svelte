@@ -5,13 +5,27 @@
   const dispatch = createEventDispatcher();
 
   export let event: Nostr.Event<Nostr.Kind.Text>;
-  export let metadata: Nostr.Event<Nostr.Kind.Metadata>;
+  export let metadata: Nostr.Event<Nostr.Kind.Metadata> | undefined = undefined;
   export let action = true;
   const parsed = parseContent(event.content);
   const reply_tag = event.tags.find(
     (tag) => tag.includes("e") && tag.includes("reply"),
   );
   const reply = reply_tag ? reply_tag[1] : null;
+  
+  // metadataから表示名を取得、失敗した場合はpubkeyを使用
+  const getDisplayName = () => {
+    try {
+      if (metadata && metadata.content) {
+        const content = JSON.parse(metadata.content);
+        return content.name || content.display_name || event.pubkey.slice(0, 6);
+      }
+      return event.pubkey.slice(0, 6);
+    } catch (error) {
+      return event.pubkey.slice(0, 6);
+    }
+  };
+  
   function onClickReply(id: string) {
     dispatch("reply", { id });
     return null;
@@ -30,7 +44,7 @@
       )}; text-indent: 0.5rem;"
     >
       <!-- んちゃんねるから{event.pubkey.slice(0, 6)}がお送りします -->
-      {JSON.parse(metadata.content).name}
+      {getDisplayName()}
     </h3>
     <time data-time={parseCreated(event.created_at)}
       >:{parseCreated(event.created_at)}</time
@@ -74,7 +88,7 @@
 
 <style>
   h3 {
-    color: #0b8e14;
+    color: var(--primary-color, #059669);
   }
   .flex {
     gap: 4px 8px;

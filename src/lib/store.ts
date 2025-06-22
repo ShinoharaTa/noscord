@@ -12,7 +12,6 @@ function getLocalStorage() {
     anonymous.set(parsed.anonymous);
     expire.set(parsed.expire);
   } catch (e) {
-    console.log("loading initian keys.");
     seckey.set(null);
     anonymous.set(null);
     expire.set(null);
@@ -34,7 +33,6 @@ function initializeStores() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("nchan_private_key");
     localStorage.removeItem("nchan_private_key_expire");
-    console.log("initialize");
     getLocalStorage();
   }
 }
@@ -83,3 +81,5 @@ export function getSecKey(): string | null {
 initializeStores();
 
 export const modal = writable<boolean>(false);
+export const settingsModal = writable<boolean>(false);
+export const selectedLimit = writable(100);

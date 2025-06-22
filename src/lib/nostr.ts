@@ -1,12 +1,13 @@
 import { createRxForwardReq } from "rx-nostr";
 import {
-  generatePrivateKey,
-  finishEvent,
-  Kind,
+  generateSecretKey,
+  finalizeEvent,
+  kinds,
   SimplePool,
   getPublicKey,
 } from "nostr-tools";
-import type { EventTemplate, Event } from "nostr-tools";
+import { hexToBytes } from '@noble/hashes/utils';
+import type { EventTemplate, UnsignedEvent } from "nostr-tools";
 import { addDays, startOfDay, format } from "date-fns";
 const pool = new SimplePool();
 import { eventKind, NostrFetcher } from "nostr-fetch";
@@ -21,14 +22,6 @@ export const relays = [
   "wss://yabu.me",
   "wss://relay-jp.shino3.net",
 ];
-// export const generateKey = () => {
-//   const key = generatePrivateKey();
-//   const expire = format(
-//     startOfDay(addDays(new Date(), 1)),
-//     "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"
-//   );
-//   return { key, expire };
-// };
 
 export const post = async (
   content: string,
@@ -36,25 +29,64 @@ export const post = async (
   seckey: string,
   reply: string | null
 ) => {
-  const event: EventTemplate<Kind.ChannelMessage> = {
-    kind: Kind.ChannelMessage,
+  const seckeyBytes = hexToBytes(seckey);
+  const event: UnsignedEvent = {
+    kind: kinds.ChannelMessage,
     content,
     tags: [],
     created_at: Math.floor(new Date().getTime() / 1000),
+    pubkey: getPublicKey(seckeyBytes),
   };
   event.tags.push(["e", thread, "", "root"]);
   if (reply) {
     event.tags.push(["e", reply, "", "reply"]);
   }
-  // event.tags.push(["client", "nchan.shino3.net"]);
-  const post = finishEvent(event, seckey);
-  new Promise(() => {
-    const pub = pool.publish(relays, post);
-    pub.on("failed", (ev: Event) => {
-      console.error("failed to send event", ev);
+  
+  const post = finalizeEvent(event, seckeyBytes);
+  
+  return new Promise<boolean>((resolve, reject) => {
+    const promises = pool.publish(relays, post);
+    let successCount = 0;
+    let failureCount = 0;
+    const totalRelays = relays.length;
+    let resolved = false;
+    
+    const relayResults: Record<string, 'pending' | 'success' | 'failed'> = {};
+    relays.forEach(relay => {
+      relayResults[relay] = 'pending';
     });
+    
+    promises.forEach((promise, index) => {
+      const relay = relays[index];
+      promise.then(() => {
+        successCount++;
+        relayResults[relay] = 'success';
+        if (successCount === 1 && !resolved) {
+          resolved = true;
+          resolve(true);
+        }
+      }).catch((error) => {
+        failureCount++;
+        relayResults[relay] = 'failed';
+        if (failureCount === totalRelays && !resolved) {
+          resolved = true;
+          reject(new Error(`すべてのリレーで投稿に失敗しました`));
+        }
+      });
+    });
+    
+    // タイムアウト処理（10秒）
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        if (successCount > 0) {
+          resolve(true);
+        } else {
+          reject(new Error("投稿がタイムアウトしました"));
+        }
+      }
+    }, 10000);
   });
-  return true;
 };
 
 export const newThread = async (
@@ -67,51 +99,44 @@ export const newThread = async (
     about,
     picture: "https://nchan.shino3.net/channel_img.png",
   };
-  const event: EventTemplate<Kind.ChannelCreation> = {
-    kind: Kind.ChannelCreation,
+  const seckeyBytes = hexToBytes(seckey);
+  const event: UnsignedEvent = {
+    kind: kinds.ChannelCreation,
     content: JSON.stringify(content),
     tags: [],
     created_at: Math.floor(new Date().getTime() / 1000),
+    pubkey: getPublicKey(seckeyBytes),
   };
-  // event.tags.push(["client", "nchan.shino3.net"]);
-  const post = finishEvent(event, seckey);
-  new Promise(() => {
-    const pub = pool.publish(relays, post);
-    pub.on("failed", (ev: Event) => {
-      console.error("failed to send event", ev);
+  const post = finalizeEvent(event, seckeyBytes);
+  
+  return new Promise<string>((resolve, reject) => {
+    const promises = pool.publish(relays, post);
+    let successCount = 0;
+    let failureCount = 0;
+    const totalRelays = relays.length;
+    
+    promises.forEach((promise) => {
+      promise.then(() => {
+        successCount++;
+        if (successCount > 0) {
+          resolve(post.id);
+        }
+      }).catch((error) => {
+        failureCount++;
+        if (failureCount === totalRelays) {
+          reject(new Error(`すべてのリレーでチャンネル作成に失敗しました`));
+        }
+      });
     });
+    
+    // タイムアウト処理（10秒）
+    setTimeout(() => {
+      if (successCount === 0) {
+        reject(new Error("チャンネル作成がタイムアウトしました"));
+      }
+    }, 10000);
   });
-  return post.id;
 };
-
-// export const newAuthor = async (seckey: string) => {
-//   const hex = getPublicKey(seckey);
-//   const content = {
-//     display_name: `んちゃんねるの名無しさん${hex.slice(0, 6)}`,
-//     name: `nchan_${hex.slice(0, 6)}`,
-//     about:
-//       "んちゃんねる (https://nchan.shino3.net) にて作られた匿名アカウントです",
-//     nip05: "",
-//     website: "",
-//     lud16: "shino3@getalby.com",
-//     picture: "https://nchan.shino3.net/channel_img.png",
-//   };
-//   const event: EventTemplate<Kind.Metadata> = {
-//     kind: Kind.Metadata,
-//     content: JSON.stringify(content),
-//     tags: [],
-//     created_at: Math.floor(new Date().getTime() / 1000),
-//   };
-//   event.tags.push(["client", "nchan.shino3.net"]);
-//   const post = finishEvent(event, seckey);
-//   new Promise(() => {
-//     const pub = pool.publish(relays, post);
-//     pub.on("failed", (ev: Event) => {
-//       console.error("failed to send event", ev);
-//     });
-//   });
-//   return;
-// };
 
 const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
 export const getSingleItem = async (params: { kind: number; id: string }) => {
@@ -150,24 +175,45 @@ export const getThreadList = async (): Promise<SingleThread[]> => {
   return result ? JSON.parse(result.content) : [];
 };
 
+export const checkRelayConnections = async (): Promise<Record<string, boolean>> => {
+  const results: Record<string, boolean> = {};
+  
+  for (const relay of relays) {
+    try {
+      const testEvent = await pool.get([relay], {
+        kinds: [40], // Channel Creation
+        limit: 1
+      });
+      results[relay] = !!testEvent;
+    } catch (error) {
+      results[relay] = false;
+    }
+  }
+  
+  return results;
+};
+
 export const getChannelMeta = async (id: string): Promise<string> => {
   const event = await pool.get(relays, {
       kinds: [40],
       ids: [id],
-    })
-    if(!event) return "";
-    const metadata = await pool.list(relays, [
-
-    {
-      kinds: [41],
-      "#e": [id],
-      authors: [event.pubkey],
-      limit: 1
-    },
-  ]
-  )
-    const latestMeta = metadata.length > 0 ? metadata.sort((a, b) => a.created_at - b.created_at)[0]: null;
-  const parsedMeta = JSON.parse(latestMeta ? latestMeta.content : event.content
-  )
-  return parsedMeta.name
+    });
+    
+  if(!event) {
+    return "";
+  }
+  
+  const metadata = await pool.querySync(relays, {
+    kinds: [41],
+    "#e": [id],
+    authors: [event.pubkey],
+    limit: 1
+  });
+  
+  const latestMeta = metadata.length > 0 ? metadata.sort((a: any, b: any) => a.created_at - b.created_at)[0]: null;
+  const parsedMeta = JSON.parse(latestMeta ? latestMeta.content : event.content);
+  
+  return parsedMeta.name || "";
 };
+
+
