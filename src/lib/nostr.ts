@@ -7,12 +7,9 @@ import {
   getPublicKey,
 } from "nostr-tools";
 import { hexToBytes } from '@noble/hashes/utils';
-import type { EventTemplate, UnsignedEvent } from "nostr-tools";
+import type { EventTemplate, UnsignedEvent, Event } from "nostr-tools";
 import { addDays, startOfDay, format } from "date-fns";
 const pool = new SimplePool();
-import { eventKind, NostrFetcher } from "nostr-fetch";
-import type { NostrEvent, FetchFilter } from "nostr-fetch";
-import { simplePoolAdapter } from "@nostr-fetch/adapter-nostr-tools";
 
 export const req = createRxForwardReq();
 
@@ -138,14 +135,26 @@ export const newThread = async (
   });
 };
 
-const fetcher = NostrFetcher.withCustomPool(simplePoolAdapter(pool));
-export const getSingleItem = async (params: { kind: number; id: string }) => {
-  const filters: FetchFilter = { kinds: [params.kind], "#e": [params.id] };
-  const lastData: NostrEvent | undefined = await fetcher.fetchLastEvent(
-    relays,
-    filters
-  );
-  return lastData;
+export const getSingleItem = async (params: { kind: number; id: string }): Promise<Event | null> => {
+  try {
+    // nostr-toolsのpool.querySync()を使用して最新のイベントを取得
+    const events = await pool.querySync(relays, {
+      kinds: [params.kind],
+      "#e": [params.id],
+      limit: 1
+    });
+    
+    // 最新のイベントを返す（created_atで降順ソート）
+    if (events.length > 0) {
+      const sortedEvents = events.sort((a, b) => b.created_at - a.created_at);
+      return sortedEvents[0];
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("getSingleItem error:", error);
+    return null;
+  }
 };
 
 export const getSingleEvent = async (id: string) => {

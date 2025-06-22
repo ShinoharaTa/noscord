@@ -9,7 +9,8 @@ const config = {
   preprocess: [
     vitePreprocess(),
     preprocess({
-      postcss: false
+      postcss: false,
+      typescript: false
     }),
   ],
   kit: {
