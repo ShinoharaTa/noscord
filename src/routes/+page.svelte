@@ -101,7 +101,7 @@
                         <span class="user-badge" style="background-color: #{event.pubkey.slice(0, 6)}44">
                           {event.pubkey.slice(0, 6)}
                         </span>
-                        <span class="message-text">{event.content}</span>
+                        <span class="message-text">{event.content.replace(/\s+/g, ' ').trim()}</span>
                       </div>
                     {/each}
                   {:else}
@@ -299,7 +299,7 @@
 
   .channel-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
   }
 
@@ -311,6 +311,8 @@
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    min-width: 0;
+    overflow: hidden;
   }
 
   .channel-card:hover {
@@ -332,14 +334,18 @@
   .channel-preview {
     margin-bottom: 12px;
     min-height: 60px;
+    overflow: hidden;
+    min-width: 0;
   }
 
   .preview-message {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 8px;
     margin-bottom: 8px;
     font-size: 0.85rem;
+    width: 100%;
+    min-width: 0;
   }
 
   .user-badge {
@@ -350,16 +356,19 @@
     font-size: 0.75rem;
     font-weight: 500;
     flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .message-text {
     color: var(--text-color);
     opacity: 0.75;
     line-height: 1.4;
+    font-size: 0.85rem;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .no-messages {
@@ -389,6 +398,12 @@
   }
 
   /* レスポンシブ対応 */
+  @media (max-width: 1023px) {
+    .channel-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
   @media (max-width: 767px) {
     .home-header {
       padding: 12px 16px;
@@ -412,7 +427,6 @@
     }
 
     .channel-grid {
-      grid-template-columns: 1fr;
       gap: 12px;
     }
 
@@ -420,11 +434,19 @@
       flex-direction: column;
       align-items: stretch;
     }
-  }
 
-  @media (min-width: 768px) and (max-width: 1023px) {
-    .channel-grid {
-      grid-template-columns: repeat(2, 1fr);
+    .preview-message {
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+
+    .user-badge {
+      font-size: 0.7rem;
+      padding: 1px 4px;
+    }
+
+    .message-text {
+      font-size: 0.8rem;
     }
   }
 </style>
