@@ -53,7 +53,8 @@
       
       if (secretKey.startsWith('nsec1')) {
         // nsec1形式の場合はHex形式に変換
-        hexKey = decode(secretKey).data;
+        const decoded = decode(secretKey);
+        hexKey = bytesToHex(decoded.data);
       } else if (secretKey.length === 64) {
         // 既にHex形式の場合はそのまま使用
         hexKey = secretKey;
