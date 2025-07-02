@@ -121,10 +121,23 @@
     transform: translateX(0);
   }
 
+  @media (max-width: 767px) {
+    .sidebar {
+      top: env(safe-area-inset-top);
+      height: calc(100vh - env(safe-area-inset-top));
+    }
+  }
+
   @media (min-width: 768px) {
     .sidebar {
       position: relative;
       transform: translateX(0);
+      top: 0;
+      height: 100vh;
+    }
+
+    .sidebar-footer {
+      padding-bottom: 16px;
     }
   }
 
@@ -238,6 +251,7 @@
 
   .sidebar-footer {
     padding: 16px 20px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border-color);
     flex-shrink: 0;
     display: flex;

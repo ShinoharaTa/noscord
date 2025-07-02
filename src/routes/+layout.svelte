@@ -65,6 +65,7 @@
     height: 100vh;
     overflow: hidden;
     position: relative;
+    padding-top: env(safe-area-inset-top);
   }
 
   @media (max-width: 767px) {

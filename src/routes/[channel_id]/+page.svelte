@@ -678,6 +678,7 @@
     border-top: 1px solid var(--border-color);
     background: var(--chat-bg);
     padding: 16px 0;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
     width: 100%;
   }
 
@@ -887,26 +888,41 @@
     }
 
     .input-area {
-      padding: 16px 0;
+      padding: 12px 0;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom));
     }
 
     .input-area-inner {
-      padding: 0 16px;
+      padding: 0 12px;
     }
 
     .input-container {
-      gap: 8px;
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
     }
 
     .send-button {
-      min-width: 48px;
+      width: 100%;
       height: 48px;
-      padding: 10px 12px;
+      padding: 12px 16px;
+      justify-content: center;
+      font-size: 1rem;
     }
 
     .message-input {
-      min-height: 48px;
-      padding: 12px 14px;
+      min-height: 60px;
+      padding: 12px 16px;
+      font-size: 1rem;
+    }
+
+    .reply-indicator {
+      margin: 0 0 12px 0;
+      padding: 8px 12px;
+    }
+
+    .reply-content {
+      padding-left: 20px;
     }
 
     .login-prompt {
