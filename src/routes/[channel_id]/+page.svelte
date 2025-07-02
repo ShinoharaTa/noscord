@@ -72,6 +72,7 @@
   let postContent = "";
   let replyId: string | null = null;
   let parentEvent: any;
+  let replyToEvent: any = null;
   let previousChannelId: string | undefined = undefined;
   let componentKey = 0;
   let showMenuButton = false;
@@ -97,6 +98,7 @@
     postContent = "";
     replyId = null;
     parentEvent = null;
+    replyToEvent = null;
     // チャンネル名の状態もリセット
     channelNameLoaded = false;
     channelName = "";
@@ -180,6 +182,7 @@
         // 投稿内容とリプライ状態をクリア
         postContent = "";
         replyId = null;
+        replyToEvent = null;
         
         // textareaの高さをリセット
         if (textareaElement) {
@@ -204,6 +207,24 @@
     parentEvent = event;
     modal.set(true);
   };
+
+  // リプライIDが設定されたときにリプライ先の投稿データを取得
+  const loadReplyToEvent = async (id: string) => {
+    try {
+      const event = await getSingleEvent(id);
+      replyToEvent = event;
+    } catch (error) {
+      console.error("リプライ先の投稿を取得できませんでした:", error);
+      replyToEvent = null;
+    }
+  };
+
+  // リプライIDの変更を監視
+  $: if (replyId) {
+    loadReplyToEvent(replyId);
+  } else {
+    replyToEvent = null;
+  }
 
   // textareaの自動リサイズ機能
   const autoResize = (event: Event) => {
@@ -230,6 +251,28 @@
       textarea.style.height = 'auto';
       const scrollHeight = textarea.scrollHeight;
       textarea.style.height = Math.max(scrollHeight, 52) + 'px';
+    }
+  };
+
+  // 投稿内容を最大3行に制限する関数
+  const truncateContent = (content: string, maxLines: number = 3) => {
+    const lines = content.split('\n');
+    if (lines.length <= maxLines) {
+      return content;
+    }
+    return lines.slice(0, maxLines).join('\n') + '...';
+  };
+
+  // 作者の表示名を取得する関数
+  const getAuthorDisplayName = (event: any, metadata: any) => {
+    try {
+      if (metadata && metadata.content) {
+        const content = JSON.parse(metadata.content);
+        return content.name || content.display_name || event.pubkey.slice(0, 6);
+      }
+      return event.pubkey.slice(0, 6);
+    } catch (error) {
+      return event.pubkey.slice(0, 6);
     }
   };
 </script>
@@ -361,15 +404,33 @@
             {#if isLoggedIn}
               {#if replyId}
                 <div class="reply-indicator">
-                  <Icon name="chat" size={16} />
-                  <span class="reply-text">リプライ中: {replyId.slice(0, 10)}</span>
-                  <button 
-                    class="reply-close" 
-                    on:click={() => (replyId = null)} 
-                    type="button"
-                  >
-                    <Icon name="x" size={14} />
-                  </button>
+                  <div class="reply-header">
+                    <Icon name="reply" size={16} />
+                    <span class="reply-label">
+                      リプライ先：
+                      {#if replyToEvent}
+                        <Metadata pubkey={replyToEvent.pubkey} queryKey={["user_meta", replyToEvent.pubkey]} let:metadata>
+                          {getAuthorDisplayName(replyToEvent, metadata)}
+                        </Metadata>
+                      {:else}
+                        読み込み中...
+                      {/if}
+                    </span>
+                    <button 
+                      class="reply-close" 
+                      on:click={() => (replyId = null)} 
+                      type="button"
+                    >
+                      <Icon name="x" size={14} />
+                    </button>
+                  </div>
+                  {#if replyToEvent}
+                    <div class="reply-content">
+                      <div class="reply-message">
+                        {truncateContent(replyToEvent.content)}
+                      </div>
+                    </div>
+                  {/if}
                 </div>
               {/if}
               <div class="input-container">
@@ -644,21 +705,41 @@
     padding: 8px 12px;
     background: var(--reply-bg);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.9rem;
     color: var(--secondary-text);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
   }
 
-  .reply-text {
+  .reply-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .reply-label {
     flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 500;
     color: var(--secondary-text);
   }
+
+  .reply-label :global(*) {
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+
+  .reply-content {
+    padding-left: 24px;
+  }
+
+  .reply-message {
+    color: var(--text-color);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    }
 
   .reply-close {
     background: none;
