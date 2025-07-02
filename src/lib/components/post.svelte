@@ -77,11 +77,15 @@
         </a>
       </p>
     {/each}
-    {#each parsed.image_urls as image}
-      <a href={image} target="_blank" class="image-link">
-        <img src={image} alt="" />
-      </a>
-    {/each}
+    {#if parsed.image_urls.length > 0}
+      <div class="image-gallery">
+        {#each parsed.image_urls as image}
+          <a href={image} target="_blank" class="image-item">
+            <img src={image} alt="" />
+          </a>
+        {/each}
+      </div>
+    {/if}
     {#each parsed.twitter_urls as url}
       <p>
         <a href={url} target="_blank" class="url-link">{url}</a>
@@ -222,17 +226,71 @@
     color: var(--primary-color-hover);
   }
 
-  /* 画像 */
-  .image-link {
-    display: block;
+  /* 画像ギャラリー：全デバイスで横スクロール */
+  .image-gallery {
     margin: 12px 0;
-    text-align: center;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
   }
 
-  .image-link img {
-    max-width: 100%;
-    height: auto;
+  /* スクロールバーのスタイル（WebKit系ブラウザ） */
+  .image-gallery::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .image-gallery::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .image-gallery::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+  }
+
+  .image-gallery::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-text);
+  }
+
+  .image-item {
+    display: block;
+    scroll-snap-align: start;
+    transition: all 0.2s ease;
+  }
+
+  /* デスクトップでの画像アイテム：少し大きめのサムネイル */
+  @media (min-width: 768px) {
+    .image-item {
+      flex: 0 0 150px;
+      width: 150px;
+      height: 150px;
+    }
+  }
+
+  /* スマートフォンでの画像アイテム */
+  @media (max-width: 767px) {
+    .image-item {
+      flex: 0 0 36vw;
+      width: 36vw;
+      height: 36vw;
+    }
+  }
+
+  .image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .image-item:hover img {
+    border-color: var(--primary-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
