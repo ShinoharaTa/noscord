@@ -493,7 +493,7 @@
         let:events
       >
         <!-- eventsの長さを監視 -->
-        {eventsLength = events.length}
+        <span class="hidden-debug">{eventsLength = events.length}</span>
 
       <div slot="loading" class="loading-container">
         <div class="loading-spinner"></div>
@@ -1158,4 +1158,9 @@
   }
 
   /* ダークモード対応は不要（CSS変数で自動対応） */
+
+  /* デバッグ用要素を非表示 */
+  .hidden-debug {
+    display: none;
+  }
 </style>
