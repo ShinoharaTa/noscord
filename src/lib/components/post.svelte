@@ -1,7 +1,7 @@
 <script lang="ts">
   import { parseContent, parseCreated, parseTimeOnly } from "$lib/app";
   import type { Nostr } from "nosvelte";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
   import Icon from "./icons.svelte";
   const dispatch = createEventDispatcher();
 
@@ -13,6 +13,11 @@
     (tag) => tag.includes("e") && tag.includes("reply"),
   );
   const reply = reply_tag ? reply_tag[1] : null;
+  
+  // 画像ビューアーの状態管理
+  let isImageModalOpen = false;
+  let currentImageIndex = 0;
+  let currentImageUrl = "";
   
   // metadataから表示名を取得、失敗した場合はpubkeyを使用
   const getDisplayName = () => {
@@ -34,6 +39,57 @@
   function onClickParentId() {
     dispatch("openReply", { id: reply });
   }
+  
+  // 画像クリック時の処理
+  function openImageModal(imageUrl: string, index: number) {
+    currentImageUrl = imageUrl;
+    currentImageIndex = index;
+    isImageModalOpen = true;
+    document.body.style.overflow = "hidden";
+  }
+  
+  // モーダルを閉じる
+  function closeImageModal() {
+    isImageModalOpen = false;
+    document.body.style.overflow = "";
+  }
+  
+  // 前の画像
+  function previousImage() {
+    if (currentImageIndex > 0) {
+      currentImageIndex--;
+      currentImageUrl = parsed.image_urls[currentImageIndex];
+    }
+  }
+  
+  // 次の画像
+  function nextImage() {
+    if (currentImageIndex < parsed.image_urls.length - 1) {
+      currentImageIndex++;
+      currentImageUrl = parsed.image_urls[currentImageIndex];
+    }
+  }
+  
+  // キーボードイベント
+  function handleKeydown(event: KeyboardEvent) {
+    if (!isImageModalOpen) return;
+    
+    if (event.key === "Escape") {
+      closeImageModal();
+    } else if (event.key === "ArrowLeft") {
+      previousImage();
+    } else if (event.key === "ArrowRight") {
+      nextImage();
+    }
+  }
+  
+  onMount(() => {
+    window.addEventListener("keydown", handleKeydown);
+    return () => {
+      window.removeEventListener("keydown", handleKeydown);
+      document.body.style.overflow = "";
+    };
+  });
 </script>
 
 <article class="post">
@@ -79,10 +135,10 @@
     {/each}
     {#if parsed.image_urls.length > 0}
       <div class="image-gallery">
-        {#each parsed.image_urls as image}
-          <a href={image} target="_blank" class="image-item">
+        {#each parsed.image_urls as image, index}
+          <button class="image-item" on:click={() => openImageModal(image, index)}>
             <img src={image} alt="" />
-          </a>
+          </button>
         {/each}
       </div>
     {/if}
@@ -102,6 +158,44 @@
     </div>
   {/if}
 </article>
+
+<!-- 画像モーダル -->
+{#if isImageModalOpen}
+  <div class="image-modal-overlay" on:click={closeImageModal}>
+    <div class="image-modal" on:click|stopPropagation>
+      <button class="image-modal-close" on:click={closeImageModal}>
+        <Icon name="x" size={24} />
+      </button>
+      
+      <div class="image-modal-content">
+        <img src={currentImageUrl} alt="" class="modal-image" />
+        
+        {#if parsed.image_urls.length > 1}
+          <div class="image-navigation">
+            <button 
+              class="nav-button nav-prev" 
+              on:click={previousImage}
+              disabled={currentImageIndex === 0}
+            >
+              <Icon name="left" size={24} />
+            </button>
+            <button 
+              class="nav-button nav-next" 
+              on:click={nextImage}
+              disabled={currentImageIndex === parsed.image_urls.length - 1}
+            >
+              <Icon name="right" size={24} />
+            </button>
+            
+            <div class="image-counter">
+              {currentImageIndex + 1} / {parsed.image_urls.length}
+            </div>
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   /* 投稿コンテナ：レスポンシブ対応 */
@@ -258,6 +352,10 @@
     display: block;
     scroll-snap-align: start;
     transition: all 0.2s ease;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
   }
 
   /* デスクトップでの画像アイテム：少し大きめのサムネイル */
@@ -320,5 +418,140 @@
     background: var(--hover-bg);
     border-color: var(--primary-color);
     color: var(--primary-color);
+  }
+
+  /* 画像モーダル */
+  .image-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+
+  .image-modal {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .image-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1001;
+    backdrop-filter: blur(4px);
+  }
+
+  .image-modal-close:hover {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+  }
+
+  .image-modal-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-image {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .image-navigation {
+    position: absolute;
+    bottom: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 16px;
+    border-radius: 24px;
+    backdrop-filter: blur(8px);
+  }
+
+  .nav-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .nav-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .nav-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .image-counter {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 500;
+    min-width: 60px;
+    text-align: center;
+  }
+
+  /* モバイル対応 */
+  @media (max-width: 767px) {
+    .image-modal-close {
+      top: 8px;
+      right: 8px;
+      width: 36px;
+      height: 36px;
+    }
+
+    .image-navigation {
+      bottom: -50px;
+      padding: 6px 12px;
+    }
+
+    .nav-button {
+      width: 32px;
+      height: 32px;
+    }
+
+    .modal-image {
+      max-width: 95vw;
+      max-height: 80vh;
+    }
   }
 </style>
