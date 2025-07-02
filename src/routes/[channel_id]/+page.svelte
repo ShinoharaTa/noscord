@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
-  import { onMount } from "svelte";
+  import { onMount, afterUpdate } from "svelte";
   import Modal from "$lib/components/modal.svelte";
   import Post from "$lib/components/post.svelte";
   import Icon from "$lib/components/icons.svelte";
@@ -78,6 +78,65 @@
   let showMenuButton = false;
   let isLoggedIn = false;
   let textareaElement: HTMLTextAreaElement;
+  let messagesContainer: HTMLElement; // メッセージコンテナの参照
+  let shouldScrollToBottom = true; // 一番下までスクロールするかどうかのフラグ
+  let previousEventCount = 0; // 前回のイベント数
+  let isInitialLoad = true; // 初回ロードかどうか
+  let isUserScrolling = false; // ユーザーがスクロール中かどうか
+  let scrollTimeout: number; // スクロール終了を検知するためのタイマー
+
+  // 一番下までスクロールする関数
+  const scrollToBottom = () => {
+    if (messagesContainer && shouldScrollToBottom && !isUserScrolling) {
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }, 50); // DOM更新後にスクロール
+    }
+  };
+
+  // ユーザーがスクロールした時に自動スクロールを停止/再開
+  const handleScroll = () => {
+    if (!messagesContainer) return;
+    
+    // ユーザーがスクロール中であることを記録
+    isUserScrolling = true;
+    
+    // 既存のタイマーをクリア
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
+    }
+    
+    // 200ms後にスクロール終了とみなす
+    scrollTimeout = setTimeout(() => {
+      isUserScrolling = false;
+    }, 200);
+    
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    
+    // 一番下近くにいる場合は自動スクロールを有効に
+    shouldScrollToBottom = isNearBottom;
+    
+    if (shouldScrollToBottom) {
+      logAutoScroll("ユーザーが最下部近くにスクロール");
+    }
+  };
+
+  // DOM更新後にスクロール処理を実行（制限付き）
+  let lastUpdateTime = 0;
+  afterUpdate(() => {
+    const now = Date.now();
+    // 100ms以内の連続更新は無視（過度な自動スクロールを防ぐ）
+    if (now - lastUpdateTime < 100) {
+      return;
+    }
+    lastUpdateTime = now;
+    
+    if (messagesContainer && shouldScrollToBottom && !isUserScrolling) {
+      logAutoScroll("DOM更新後");
+      scrollToBottom();
+    }
+  });
 
   // channel_idが変更されたときにチャンネル情報を再読み込み
   const loadChannelInfo = async (id: string) => {
@@ -99,6 +158,10 @@
     replyId = null;
     parentEvent = null;
     replyToEvent = null;
+    shouldScrollToBottom = true; // チャンネル変更時は一番下までスクロール
+    previousEventCount = 0; // イベント数もリセット
+    isInitialLoad = true; // 初回ロード状態をリセット
+    knownEventIds.clear(); // 既知のイベントIDもクリア
     // チャンネル名の状態もリセット
     channelNameLoaded = false;
     channelName = "";
@@ -109,6 +172,17 @@
     const seckey = getSecKey();
     isLoggedIn = !!seckey;
   };
+
+  // DOM監視を開始
+  onMount(() => {
+    messageCheckInterval = setInterval(checkMessageCountChange, 1000); // 1秒ごとにチェック
+    
+    return () => {
+      if (messageCheckInterval) {
+        clearInterval(messageCheckInterval);
+      }
+    };
+  });
 
   // 初期化時の処理
   onMount(() => {
@@ -135,9 +209,15 @@
     };
     window.addEventListener('focus', handleFocus);
 
+    // DOM監視を開始
+    messageCheckInterval = setInterval(checkMessageCountChange, 1000);
+
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('focus', handleFocus);
+      if (messageCheckInterval) {
+        clearInterval(messageCheckInterval);
+      }
     };
   });
 
@@ -183,6 +263,14 @@
         postContent = "";
         replyId = null;
         replyToEvent = null;
+        
+        // 投稿後は一番下までスクロール（強制実行）
+        shouldScrollToBottom = true;
+        isUserScrolling = false; // 投稿後は強制的にリセット
+        logAutoScroll("投稿完了後");
+        setTimeout(() => {
+          scrollToBottom();
+        }, 150); // 少し長めの遅延
         
         // textareaの高さをリセット
         if (textareaElement) {
@@ -276,6 +364,111 @@
     }
   };
 
+  // eventsの長さを監視するための変数
+  let eventsLength = 0;
+  $: if (eventsLength > 0) {
+    // 新規投稿が追加された場合（初回ロード時は除く）
+    if (previousEventCount > 0 && eventsLength > previousEventCount) {
+      console.log(`新規投稿を検出: ${eventsLength - previousEventCount}件`);
+      
+      // ユーザーが最下部近くにいて、かつスクロール中でない場合のみ自動スクロール
+      if (shouldScrollToBottom && messagesContainer && !isUserScrolling) {
+        logAutoScroll("新規投稿検出");
+        setTimeout(() => {
+          if (!isUserScrolling) { // 再度チェック
+            scrollToBottom();
+          }
+        }, 100);
+      }
+    }
+    
+    // 初回ロード時は新規投稿とみなさない
+    if (isInitialLoad) {
+      isInitialLoad = false;
+    }
+    
+    previousEventCount = eventsLength;
+  };
+
+  // nosvelteに適した新規投稿検出
+  let knownEventIds = new Set<string>();
+  let lastEventCheckTime = 0;
+  
+  const checkForNewEvents = (events: Nostr.Event[]) => {
+    const now = Date.now();
+    // 500ms以内の連続チェックを防ぐ
+    if (now - lastEventCheckTime < 500) {
+      return;
+    }
+    lastEventCheckTime = now;
+    
+    if (!events || events.length === 0) {
+      return;
+    }
+    
+    // 新しいイベントIDを検出
+    const newEvents = events.filter(event => !knownEventIds.has(event.id));
+    
+    if (newEvents.length > 0 && knownEventIds.size > 0) { // 初回ロード時は除外
+      console.log(`新規イベント検出: ${newEvents.length}件`);
+      
+      // ユーザーが最下部近くにいて、かつスクロール中でない場合のみ自動スクロール
+      if (shouldScrollToBottom && messagesContainer && !isUserScrolling) {
+        logAutoScroll(`新規イベント: ${newEvents.length}件`);
+        setTimeout(() => {
+          if (!isUserScrolling && shouldScrollToBottom) {
+            scrollToBottom();
+          }
+        }, 200); // 少し長めの遅延でDOM更新を確実に待つ
+      }
+    }
+    
+    // 既知のイベントIDセットを更新
+    events.forEach(event => knownEventIds.add(event.id));
+  };
+
+  // 新規投稿検出のデバッグ用ログ
+  let lastScrollTime = 0;
+  const logAutoScroll = (reason: string) => {
+    const now = Date.now();
+    if (now - lastScrollTime > 1000) { // 1秒以内の重複ログを防ぐ
+      console.log(`自動スクロール実行: ${reason}`);
+      lastScrollTime = now;
+    }
+  };
+
+  // eventsを監視するためのreactive statement（nosvelteに適応）
+  let currentEvents: Nostr.Event[] = [];
+  $: if (currentEvents) {
+    checkForNewEvents(currentEvents);
+  };
+
+  // DOMベースの新規投稿検出（nosvelteのフォールバック）
+  let lastMessageCount = 0;
+  let messageCheckInterval: number;
+
+  const checkMessageCountChange = () => {
+    if (!messagesContainer) return;
+    
+    const messageElements = messagesContainer.querySelectorAll('.message-wrapper');
+    const currentMessageCount = messageElements.length;
+    
+    if (lastMessageCount > 0 && currentMessageCount > lastMessageCount) {
+      console.log(`DOM監視: 新規メッセージ検出 ${currentMessageCount - lastMessageCount}件`);
+      
+      // ユーザーが最下部近くにいて、かつスクロール中でない場合のみ自動スクロール
+      if (shouldScrollToBottom && !isUserScrolling) {
+        logAutoScroll(`DOM監視: +${currentMessageCount - lastMessageCount}件`);
+        setTimeout(() => {
+          if (!isUserScrolling && shouldScrollToBottom) {
+            scrollToBottom();
+          }
+        }, 300);
+      }
+    }
+    
+    lastMessageCount = currentMessageCount;
+  };
 
 </script>
 
@@ -299,6 +492,8 @@
         {req}
         let:events
       >
+        <!-- eventsの長さを監視 -->
+        {eventsLength = events.length}
 
       <div slot="loading" class="loading-container">
         <div class="loading-spinner"></div>
@@ -341,7 +536,11 @@
 
       <!-- メッセージエリア -->
       <div class="messages-container">
-        <div class="messages-list">
+        <div 
+          class="messages-list"
+          bind:this={messagesContainer}
+          on:scroll={handleScroll}
+        >
           {#each groupByDate(events) as group (group.date)}
             <!-- 日付セパレーター -->
             <div class="date-separator">
