@@ -275,6 +275,8 @@
       return event.pubkey.slice(0, 6);
     }
   };
+
+
 </script>
 
 
@@ -439,7 +441,7 @@
                   bind:this={textareaElement}
                   on:keydown={submitKeydown}
                   on:input={autoResize}
-                  placeholder="{channelName || 'チャンネル'}にメッセージを送信"
+                  placeholder="メッセージを送信"
                   class="message-input"
                   rows="1"
                 ></textarea>
