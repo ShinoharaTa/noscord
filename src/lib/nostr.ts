@@ -20,6 +20,26 @@ export const relays = [
   "wss://relay-jp.shino3.net",
 ];
 
+// カスタム絵文字を検出してタグを生成する関数
+const extractEmojiTags = (content: string): [string, string][] => {
+  const emojiPattern = /:([a-zA-Z0-9_+-]+):/g;
+  const emojiTags: [string, string][] = [];
+  const seenEmojis = new Set<string>();
+  
+  let match;
+  while ((match = emojiPattern.exec(content)) !== null) {
+    const emojiName = match[1];
+    if (!seenEmojis.has(emojiName)) {
+      seenEmojis.add(emojiName);
+      // デフォルトの絵文字URL（実際の実装では適切なURLを設定）
+      const emojiUrl = `https://emoji.example.com/${emojiName}.png`;
+      emojiTags.push([emojiName, emojiUrl]);
+    }
+  }
+  
+  return emojiTags;
+};
+
 export const post = async (
   content: string,
   thread: string,
@@ -38,6 +58,12 @@ export const post = async (
   if (reply) {
     event.tags.push(["e", reply, "", "reply"]);
   }
+  
+  // カスタム絵文字タグを追加
+  const emojiTags = extractEmojiTags(content);
+  emojiTags.forEach(([shortcode, url]) => {
+    event.tags.push(["emoji", shortcode, url]);
+  });
   
   const post = finalizeEvent(event, seckeyBytes);
   

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { parseContent, parseCreated, parseTimeOnly } from "$lib/app";
+  import { parseContent, parseCreated, parseTimeOnly, processCustomEmojis } from "$lib/app";
   import type { Nostr } from "nosvelte";
   import { createEventDispatcher, onMount } from "svelte";
   import Icon from "./icons.svelte";
@@ -13,6 +13,9 @@
     (tag) => tag.includes("e") && tag.includes("reply"),
   );
   const reply = reply_tag ? reply_tag[1] : null;
+  
+  // カスタム絵文字で処理されたテキスト
+  const processedText = processCustomEmojis(parsed.text_without_urls, event);
   
   // 画像ビューアーの状態管理
   let isImageModalOpen = false;
@@ -125,7 +128,7 @@
   {/if}
   
   <div class="post-content">
-    <p>{parsed.text_without_urls}</p>
+    <p>{@html processedText}</p>
     {#each parsed.other_urls as url}
       <p>
         <a href={url} target="_blank" class="url-link">
@@ -288,6 +291,21 @@
     margin: 8px 0;
   }
 
+  /* カスタム絵文字スタイル */
+  article img.custom-emoji,
+  .post-content .custom-emoji {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    width: 1em !important;
+    height: 1em !important;
+    max-width: 1em !important;
+    max-height: 1em !important;
+    aspect-ratio: 1 / 1 !important;
+    margin: 0 0.1em !important;
+    border-radius: 2px !important;
+    object-fit: contain !important;
+  }
+
   /* リプライリンク */
   .reply-link, .reply-text {
     font-size: 0.9rem;
@@ -427,131 +445,127 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
+    padding: 20px;
+    box-sizing: border-box;
   }
 
   .image-modal {
     position: relative;
     max-width: 90vw;
     max-height: 90vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   }
 
   .image-modal-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    top: 16px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
     color: white;
+    border-radius: 50%;
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    z-index: 1001;
-    backdrop-filter: blur(4px);
+    transition: background-color 0.2s;
   }
 
   .image-modal-close:hover {
-    background: rgba(0, 0, 0, 0.8);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.05);
+    background: rgba(0, 0, 0, 0.9);
   }
 
   .image-modal-content {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    height: 100%;
   }
 
   .modal-image {
-    max-width: 90vw;
-    max-height: 90vh;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
-    border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    display: block;
   }
 
   .image-navigation {
     position: absolute;
-    bottom: -60px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 16px;
     background: rgba(0, 0, 0, 0.7);
-    padding: 8px 16px;
-    border-radius: 24px;
-    backdrop-filter: blur(8px);
+    padding: 12px 20px;
+    border-radius: 25px;
+    color: white;
   }
 
   .nav-button {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: none;
+    border: none;
     color: white;
-    width: 36px;
-    height: 36px;
+    cursor: pointer;
+    padding: 8px;
     border-radius: 50%;
+    transition: background-color 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
   }
 
   .nav-button:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.5);
   }
 
   .nav-button:disabled {
-    opacity: 0.3;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
   .image-counter {
-    color: white;
     font-size: 0.9rem;
     font-weight: 500;
     min-width: 60px;
     text-align: center;
   }
 
-  /* モバイル対応 */
+  /* レスポンシブ対応 */
   @media (max-width: 767px) {
-    .image-modal-close {
-      top: 8px;
-      right: 8px;
-      width: 36px;
-      height: 36px;
+    .image-modal-overlay {
+      padding: 10px;
+    }
+
+    .image-modal {
+      max-width: 95vw;
+      max-height: 95vh;
     }
 
     .image-navigation {
-      bottom: -50px;
-      padding: 6px 12px;
+      bottom: 10px;
+      padding: 8px 16px;
+      gap: 12px;
     }
 
     .nav-button {
-      width: 32px;
-      height: 32px;
+      padding: 6px;
     }
 
-    .modal-image {
-      max-width: 95vw;
-      max-height: 80vh;
+    .image-counter {
+      font-size: 0.8rem;
+      min-width: 50px;
     }
   }
 </style>
