@@ -164,7 +164,7 @@ export const getSingleEvent = async (id: string) => {
   })
 };
 
-type SingleThread = {
+export type SingleThread = {
   id: string;
   author: string;
   latest_update: number;
@@ -177,11 +177,32 @@ type SingleThread = {
 };
 
 export const getThreadList = async (): Promise<SingleThread[]> => {
-  const result = await pool.get(relays, {
-    kinds: [30078],
-    "#d": ["nchan_list"],
-  });
-  return result ? JSON.parse(result.content) : [];
+  // REST API から取得
+  try {
+    const response = await fetch("https://thread.nchan.vip/channels", {
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+
+    if (response.ok) {
+      const json = await response.json();
+      // API 形式: 配列 or { data: [...] }
+      const list: any[] = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
+      // events が無い場合は空配列を補完
+      return list.map((item) => ({
+        ...item,
+        events: Array.isArray(item.events) ? item.events : [],
+      })) as SingleThread[];
+    } else {
+      console.warn(`REST API returned status ${response.status}`);
+    }
+  } catch (error) {
+    console.warn("Failed to fetch channel list via REST API", error);
+  }
+
+  // REST API が失敗した場合は空配列を返す
+  return [];
 };
 
 export const checkRelayConnections = async (): Promise<Record<string, boolean>> => {

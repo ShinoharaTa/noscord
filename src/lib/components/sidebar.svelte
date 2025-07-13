@@ -3,26 +3,25 @@
   import { parseCreated } from "$lib/app";
   import Author from "$lib/components/author.svelte";
   import Icon from "$lib/components/icons.svelte";
-  import { getThreadList } from "$lib/nostr";
-  import { settingsModal } from "$lib/store";
+  import { settingsModal, channelList, channelLoading, loadChannelList, refreshChannelList } from "$lib/store";
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import "websocket-polyfill";
+  import type { SingleThread } from "$lib/nostr";
 
   export let isOpen = false;
 
-  let threads: any[] = [];
-  let loading = true;
-  
-  onMount(async () => {
-    threads = await getThreadList();
-    loading = false;
+  let threads: SingleThread[] = [];
+
+  onMount(() => {
+    loadChannelList();
   });
 
+  $: threads = $channelList;
+  $: loading = $channelLoading;
+
   const reload = async () => {
-    loading = true;
-    threads = await getThreadList();
-    loading = false;
+    await refreshChannelList();
   };
 
   const newThread = () => goto("/new");

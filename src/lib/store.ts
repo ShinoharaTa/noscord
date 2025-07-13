@@ -1,4 +1,5 @@
 import { writable, get } from "svelte/store";
+import { getThreadList, type SingleThread } from "$lib/nostr";
 
 const seckey = writable<string | null>(null);
 const anonymous = writable<string | null>(null);
@@ -83,3 +84,35 @@ initializeStores();
 export const modal = writable<boolean>(false);
 export const settingsModal = writable<boolean>(false);
 export const selectedLimit = writable(100);
+
+// =========================
+// チャンネル一覧の共有ストア
+// =========================
+
+export const channelList = writable<SingleThread[]>([]);
+export const channelLoading = writable<boolean>(false);
+
+// 内部で並列呼び出しを抑制するためのフラグ
+let isFetchingChannels = false;
+
+export async function loadChannelList(force = false) {
+  if (!force && (isFetchingChannels || get(channelList).length > 0)) {
+    // 既に読み込み済み or 取得中
+    return;
+  }
+  isFetchingChannels = true;
+  channelLoading.set(true);
+  try {
+    const list = await getThreadList();
+    channelList.set(list);
+  } catch (e) {
+    console.error("Failed to load channel list", e);
+  } finally {
+    channelLoading.set(false);
+    isFetchingChannels = false;
+  }
+}
+
+export async function refreshChannelList() {
+  return loadChannelList(true);
+}

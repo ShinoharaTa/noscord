@@ -3,21 +3,19 @@
   import { parseCreated } from "$lib/app";
   import Author from "$lib/components/author.svelte";
   import Icon from "$lib/components/icons.svelte";
-  import { getThreadList } from "$lib/nostr";
+  import { channelList, channelLoading, refreshChannelList } from "$lib/store";
+  import type { SingleThread } from "$lib/nostr";
   import { onMount } from "svelte";
   import "websocket-polyfill";
 
-  let threads: any[] = [];
+  let threads: SingleThread[] = [];
   let loading = true;
   let showMenuButton = false;
   
-  onMount(() => {
-    showMenuButton = window.innerWidth < 1024;
-  });
+  // 初期ロード
 
   onMount(async () => {
-    threads = await getThreadList();
-    loading = false;
+    await refreshChannelList();
 
     // メニューボタンの表示制御
     const updateMenuButton = () => {
@@ -33,12 +31,14 @@
   });
 
   const reload = async () => {
-    loading = true;
-    threads = await getThreadList();
-    loading = false;
+    await refreshChannelList();
   };
 
   const newThread = () => goto("/new");
+
+  // reactive subscriptions
+  $: threads = $channelList;
+  $: loading = $channelLoading;
 </script>
 
 <div class="home-container">
