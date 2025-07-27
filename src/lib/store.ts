@@ -92,8 +92,13 @@ export const selectedLimit = writable(100);
 export const channelList = writable<SingleThread[]>([]);
 export const channelLoading = writable<boolean>(false);
 
+// 新しいAPI用のチャンネル一覧ストア
+export const apiChannelList = writable<any[]>([]);
+export const apiChannelLoading = writable<boolean>(false);
+
 // 内部で並列呼び出しを抑制するためのフラグ
 let isFetchingChannels = false;
+let isFetchingApiChannels = false;
 
 export async function loadChannelList(force = false) {
   if (!force && (isFetchingChannels || get(channelList).length > 0)) {
@@ -115,4 +120,74 @@ export async function loadChannelList(force = false) {
 
 export async function refreshChannelList() {
   return loadChannelList(true);
+}
+
+// 新しいAPIを使ったチャンネル一覧取得
+export async function loadApiChannelList(
+  sort: 'latest' | 'oldest' | 'created_new' | 'created_old' = 'latest',
+  limit: number = 50,
+  force = false
+) {
+  if (!force && isFetchingApiChannels) {
+    return;
+  }
+  
+  isFetchingApiChannels = true;
+  apiChannelLoading.set(true);
+  
+  try {
+    // 外部APIエンドポイントを使用
+    const response = await fetch("https://thread.nchan.vip/channels", {
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const json = await response.json();
+    let list: any[] = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
+    
+    // events が無い場合は空配列を補完
+    list = list.map((item) => ({
+      ...item,
+      events: Array.isArray(item.events) ? item.events : [],
+    }));
+    
+    // ソート処理
+    switch (sort) {
+      case 'latest':
+        list.sort((a, b) => new Date(b.latest_update || 0).getTime() - new Date(a.latest_update || 0).getTime());
+        break;
+      case 'oldest':
+        list.sort((a, b) => new Date(a.latest_update || 0).getTime() - new Date(b.latest_update || 0).getTime());
+        break;
+      case 'created_new':
+        list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+        break;
+      case 'created_old':
+        list.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+        break;
+    }
+    
+    // リミット適用
+    const limitedList = list.slice(0, Math.min(Math.max(limit, 1), 200));
+    
+    apiChannelList.set(limitedList);
+  } catch (e) {
+    console.error("Failed to load API channel list", e);
+    apiChannelList.set([]);
+  } finally {
+    apiChannelLoading.set(false);
+    isFetchingApiChannels = false;
+  }
+}
+
+export async function refreshApiChannelList(
+  sort: 'latest' | 'oldest' | 'created_new' | 'created_old' = 'latest',
+  limit: number = 50
+) {
+  return loadApiChannelList(sort, limit, true);
 }

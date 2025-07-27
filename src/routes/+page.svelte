@@ -56,7 +56,6 @@
       {/if}
       <div class="title-content">
         <h1>ホーム</h1>
-        <p class="subtitle">Nostrチャンネルの一覧</p>
       </div>
     </div>
   </div>

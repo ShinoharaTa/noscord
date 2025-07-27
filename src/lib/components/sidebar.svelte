@@ -34,7 +34,7 @@
     }
   };
 
-  $: currentChannelId = $page.params.channel_id;
+  $: currentPath = $page.url.pathname;
 </script>
 
 <div class="sidebar" class:open={isOpen}>
@@ -59,15 +59,22 @@
         <div class="channel-list">
           <button 
             class="channel-item" 
-            class:active={!currentChannelId}
+            class:active={currentPath === "/"}
             on:click={() => goto('/')}
           >
             ホーム
           </button>
+          <button 
+            class="channel-item"
+            class:active={currentPath === "/channels"}
+            on:click={() => goto('/channels')}
+          >
+            他のチャンネルを探す
+          </button>
           {#each threads as thread}
             <button 
               class="channel-item" 
-              class:active={currentChannelId === thread.id}
+              class:active={currentPath === `/${thread.id}`}
               on:click={() => selectChannel(thread.id)}
             >
               <div class="channel-info">
