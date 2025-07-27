@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { parseContent, parseCreated, parseTimeOnly, processCustomEmojis } from "$lib/app";
+  import { parseContent, parseCreated, parseTimeOnly, processCustomEmojis, aggregateReactions, sanitizeReactionContent, type ReactionSummary } from "$lib/app";
+  import { getReactions, react, reactWithNip07, deleteReaction, deleteReactionWithNip07 } from "$lib/nostr";
+  import { getSecKey, getUseNip07, nip07Available } from "$lib/store";
   import type { Nostr } from "nosvelte";
   import { createEventDispatcher, onMount } from "svelte";
   import Icon from "./icons.svelte";
@@ -21,6 +23,32 @@
   let isImageModalOpen = false;
   let currentImageIndex = 0;
   let currentImageUrl = "";
+  
+  // リアクション管理
+  let reactions: ReactionSummary[] = [];
+  let loadingReactions = false;
+  let addingReaction = false;
+  
+  // 現在のユーザーの公開鍵を取得
+  let currentUserPubkey = '';
+  const updateCurrentUserPubkey = async () => {
+    const useNip07 = getUseNip07();
+    if (useNip07 && $nip07Available && window.nostr) {
+      try {
+        currentUserPubkey = await window.nostr.getPublicKey();
+      } catch (e) {
+        console.warn('NIP-07で公開鍵を取得できませんでした:', e);
+      }
+    } else {
+      const seckey = getSecKey();
+      if (seckey) {
+        // 秘密鍵から公開鍵を生成
+        const { getPublicKey } = await import('nostr-tools');
+        const { hexToBytes } = await import('@noble/hashes/utils');
+        currentUserPubkey = getPublicKey(hexToBytes(seckey));
+      }
+    }
+  };
   
   // metadataから表示名を取得、失敗した場合はpubkeyを使用
   const getDisplayName = () => {
@@ -57,14 +85,84 @@
     document.body.style.overflow = "";
   }
   
-  // 前の画像
+  // リアクションを読み込む
+  const loadReactions = async () => {
+    loadingReactions = true;
+    try {
+      const reactionEvents = await getReactions(event.id);
+      reactions = aggregateReactions(reactionEvents, currentUserPubkey);
+    } catch (error) {
+      console.error('リアクション読み込みエラー:', error);
+    } finally {
+      loadingReactions = false;
+    }
+  };
+  
+  // リアクションを送信または削除
+  const sendReaction = async (reactionContent: string) => {
+    if (addingReaction) return;
+    
+    const sanitized = sanitizeReactionContent(reactionContent);
+    if (!sanitized) return;
+    
+    // 既に自分がそのリアクションをしているかチェック
+    const existingReaction = reactions.find(r => r.content === sanitized && r.hasCurrentUser);
+    
+    addingReaction = true;
+    try {
+      const useNip07 = getUseNip07();
+      let success = false;
+      
+      if (existingReaction && existingReaction.currentUserReactionId) {
+        // 既存のリアクションを削除
+        if (useNip07 && $nip07Available) {
+          success = await deleteReactionWithNip07(existingReaction.currentUserReactionId);
+        } else {
+          const seckey = getSecKey();
+          if (seckey) {
+            success = await deleteReaction(existingReaction.currentUserReactionId, seckey);
+          } else {
+            alert('リアクション削除にはログインが必要です');
+            return;
+          }
+        }
+      } else {
+        // 新しいリアクションを送信
+        if (useNip07 && $nip07Available) {
+          success = await reactWithNip07(sanitized, event.id, event.pubkey);
+        } else {
+          const seckey = getSecKey();
+          if (seckey) {
+            success = await react(sanitized, event.id, event.pubkey, seckey);
+          } else {
+            alert('リアクションするにはログインが必要です');
+            return;
+          }
+        }
+      }
+      
+              if (success) {
+          // リアクションを再読み込み
+          await loadReactions();
+        }
+    } catch (error) {
+      console.error('リアクション処理エラー:', error);
+      alert('リアクションの処理に失敗しました');
+    } finally {
+      addingReaction = false;
+    }
+  };
+  
+
+  
+    // 前の画像
   function previousImage() {
     if (currentImageIndex > 0) {
       currentImageIndex--;
       currentImageUrl = parsed.image_urls[currentImageIndex];
     }
   }
-  
+
   // 次の画像
   function nextImage() {
     if (currentImageIndex < parsed.image_urls.length - 1) {
@@ -72,6 +170,12 @@
       currentImageUrl = parsed.image_urls[currentImageIndex];
     }
   }
+  
+  // コンポーネント初期化時の処理
+  onMount(async () => {
+    await updateCurrentUserPubkey();
+    await loadReactions();
+  });
   
   // キーボードイベント
   function handleKeydown(event: KeyboardEvent) {
@@ -155,11 +259,59 @@
   {#if action}
     <div class="post-actions">
       <button class="reply-btn small" on:click={onClickReply(event.id)}>
-        <Icon name="reply" size={16} />
-        リプライ
+        <Icon name="reply" size={14} />
       </button>
+      
+      <!-- ⭐リアクションボタン -->
+      {#if reactions.find(r => r.content === '⭐️')}
+        {@const starReaction = reactions.find(r => r.content === '⭐️')}
+        <button 
+          class="reaction-btn small {starReaction?.hasCurrentUser ? 'user-reacted' : ''}"
+          on:click={() => sendReaction('⭐️')}
+          disabled={addingReaction}
+        >
+          {#if addingReaction}
+            <Icon name="loader" size={14} />
+          {:else}
+            <Icon name="star" size={14} />
+          {/if}
+          {#if starReaction && starReaction.count > 1}
+            {starReaction.count}
+          {/if}
+        </button>
+      {:else}
+        <button 
+          class="reaction-btn small"
+          on:click={() => sendReaction('⭐️')}
+          disabled={addingReaction}
+        >
+          {#if addingReaction}
+            <Icon name="loader" size={14} />
+          {:else}
+            <Icon name="star" size={14} />
+          {/if}
+        </button>
+      {/if}
+      
+      <!-- その他のリアクションボタン -->
+      {#each reactions.filter(r => r.content !== '⭐️') as reaction (reaction.content)}
+        <button 
+          class="reaction-btn small {reaction.hasCurrentUser ? 'user-reacted' : ''}"
+          on:click={() => sendReaction(reaction.content)}
+          disabled={addingReaction}
+        >
+          <span class="reaction-emoji">{reaction.content}</span>
+          {#if reaction.count > 1}
+            {reaction.count}
+          {/if}
+        </button>
+      {/each}
+      
+
     </div>
   {/if}
+
+
 </article>
 
 <!-- 画像モーダル -->
@@ -420,22 +572,20 @@
   .reply-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border: 1px solid var(--border-color);
-    background: none;
-    color: var(--text-color);
-    font-size: 0.85rem;
-    border-radius: 6px;
+    gap: 4px;
+    padding: 4px 8px;
+    border: none;
+    background: #4a5568;
+    color: white;
+    font-size: 0.75rem;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
     font-weight: var(--font-weight-medium);
   }
 
   .reply-btn:hover {
-    background: var(--hover-bg);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
+    background: #2d3748;
   }
 
   /* 画像モーダル */
@@ -568,4 +718,44 @@
       min-width: 50px;
     }
   }
+
+
+
+  /* リアクションボタンとピッカー */
+
+  .reaction-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border: none;
+    background: #4a5568;
+    color: white;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .reaction-btn:hover {
+    background: #2d3748;
+  }
+
+  .reaction-btn.user-reacted {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .reaction-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .reaction-emoji {
+    font-size: 1em;
+    line-height: 1;
+  }
+
+
 </style>

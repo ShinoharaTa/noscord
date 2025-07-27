@@ -14,7 +14,10 @@
     EyeOff,
     Trash2,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Smile,
+    Loader,
+    Star
   } from 'lucide-svelte';
 
   export let name: string;
@@ -38,7 +41,10 @@
     'eye-off': EyeOff,
     trash: Trash2,
     left: ChevronLeft,
-    right: ChevronRight
+    right: ChevronRight,
+    smile: Smile,
+    loader: Loader,
+    star: Star
   };
 
   $: IconComponent = iconMap[name as keyof typeof iconMap];

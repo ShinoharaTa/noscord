@@ -86,3 +86,50 @@ export function createEmojiMapping(event: any): Record<string, string> {
   
   return emojiMapping;
 }
+
+// リアクションデータを集計する関数
+export interface ReactionSummary {
+  content: string;
+  count: number;
+  users: string[];
+  hasCurrentUser: boolean;
+  currentUserReactionId?: string; // 自分のリアクションのID
+}
+
+export function aggregateReactions(reactions: any[], currentUserPubkey?: string): ReactionSummary[] {
+  const reactionMap = new Map<string, ReactionSummary>();
+  
+  reactions.forEach((reaction) => {
+    const content = reaction.content;
+    if (!content) return;
+    
+    if (reactionMap.has(content)) {
+      const existing = reactionMap.get(content)!;
+      // すべてのリアクションを1件ずつカウント（重複チェックなし）
+      existing.count++;
+      if (!existing.users.includes(reaction.pubkey)) {
+        existing.users.push(reaction.pubkey);
+      }
+      if (currentUserPubkey && reaction.pubkey === currentUserPubkey) {
+        existing.hasCurrentUser = true;
+        existing.currentUserReactionId = reaction.id;
+      }
+    } else {
+      reactionMap.set(content, {
+        content,
+        count: 1,
+        users: [reaction.pubkey],
+        hasCurrentUser: currentUserPubkey ? reaction.pubkey === currentUserPubkey : false,
+        currentUserReactionId: currentUserPubkey && reaction.pubkey === currentUserPubkey ? reaction.id : undefined
+      });
+    }
+  });
+  
+  return Array.from(reactionMap.values()).sort((a, b) => b.count - a.count);
+}
+
+// リアクションコンテンツをサニタイズする関数
+export function sanitizeReactionContent(content: string): string {
+  // 危険な文字列を除去し、絵文字のみを許可
+  return content.replace(/[<>\"'&]/g, '').slice(0, 10);
+}

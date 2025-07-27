@@ -380,4 +380,268 @@ export const getChannelMeta = async (id: string): Promise<string> => {
   return parsedMeta.name || "";
 };
 
+// リアクション投稿（NIP-25）
+export const react = async (
+  content: string, // 絵文字や"+"、"-"など
+  targetEventId: string,
+  targetEventAuthor: string,
+  seckey: string
+) => {
+  const seckeyBytes = hexToBytes(seckey);
+  const event: UnsignedEvent = {
+    kind: 7, // NIP-25 Reaction
+    content,
+    tags: [],
+    created_at: Math.floor(new Date().getTime() / 1000),
+    pubkey: getPublicKey(seckeyBytes),
+  };
+  
+  // 対象の投稿を参照
+  event.tags.push(["e", targetEventId]);
+  event.tags.push(["p", targetEventAuthor]);
+  
+  const reaction = finalizeEvent(event, seckeyBytes);
+  
+  return new Promise<boolean>((resolve, reject) => {
+    const promises = pool.publish(relays, reaction);
+    let successCount = 0;
+    let failureCount = 0;
+    const totalRelays = relays.length;
+    let resolved = false;
+    
+    promises.forEach((promise) => {
+      promise.then(() => {
+        successCount++;
+        if (successCount === 1 && !resolved) {
+          resolved = true;
+          resolve(true);
+        }
+      }).catch((error) => {
+        failureCount++;
+        if (failureCount === totalRelays && !resolved) {
+          resolved = true;
+          reject(new Error(`すべてのリレーでリアクションに失敗しました`));
+        }
+      });
+    });
+    
+    // タイムアウト処理（10秒）
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        if (successCount > 0) {
+          resolve(true);
+        } else {
+          reject(new Error("リアクションがタイムアウトしました"));
+        }
+      }
+    }, 10000);
+  });
+};
+
+// NIP-07を使ったリアクション投稿
+export const reactWithNip07 = async (
+  content: string, // 絵文字や"+"、"-"など
+  targetEventId: string,
+  targetEventAuthor: string
+): Promise<boolean> => {
+  if (!window.nostr) {
+    throw new Error('NIP-07ブラウザ拡張機能が見つかりません');
+  }
+
+  try {
+    const pubkey = await window.nostr.getPublicKey();
+    
+    const event = {
+      kind: 7, // NIP-25 Reaction
+      content,
+      tags: [] as string[][],
+      created_at: Math.floor(new Date().getTime() / 1000),
+      pubkey,
+    };
+    
+    // 対象の投稿を参照
+    event.tags.push(["e", targetEventId]);
+    event.tags.push(["p", targetEventAuthor]);
+    
+    const signedEvent = await window.nostr.signEvent(event);
+    
+    return new Promise<boolean>((resolve, reject) => {
+      const promises = pool.publish(relays, signedEvent);
+      let successCount = 0;
+      let failureCount = 0;
+      const totalRelays = relays.length;
+      let resolved = false;
+      
+      promises.forEach((promise) => {
+        promise.then(() => {
+          successCount++;
+          if (successCount === 1 && !resolved) {
+            resolved = true;
+            resolve(true);
+          }
+        }).catch((error) => {
+          failureCount++;
+          if (failureCount === totalRelays && !resolved) {
+            resolved = true;
+            reject(new Error(`すべてのリレーでリアクションに失敗しました`));
+          }
+        });
+      });
+      
+      // タイムアウト処理（10秒）
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          if (successCount > 0) {
+            resolve(true);
+          } else {
+            reject(new Error("リアクションがタイムアウトしました"));
+          }
+        }
+      }, 10000);
+    });
+  } catch (error) {
+    throw new Error(`NIP-07でのリアクションに失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+// 特定投稿のリアクションを取得
+export const getReactions = async (eventId: string): Promise<Event[]> => {
+  try {
+    const reactions = await pool.querySync(relays, {
+      kinds: [7], // Reaction kind
+      "#e": [eventId],
+      limit: 100
+    });
+    
+    return reactions.sort((a, b) => a.created_at - b.created_at);
+  } catch (error) {
+    console.error("リアクション取得エラー:", error);
+    return [];
+  }
+};
+
+// リアクション削除（NIP-09）
+export const deleteReaction = async (
+  reactionEventId: string,
+  seckey: string,
+  reason: string = "リアクションを取り消しました"
+) => {
+  const seckeyBytes = hexToBytes(seckey);
+  const event: UnsignedEvent = {
+    kind: 5, // NIP-09 Event Deletion
+    content: reason,
+    tags: [],
+    created_at: Math.floor(new Date().getTime() / 1000),
+    pubkey: getPublicKey(seckeyBytes),
+  };
+  
+  // 削除対象のリアクションを参照
+  event.tags.push(["e", reactionEventId]);
+  
+  const deletion = finalizeEvent(event, seckeyBytes);
+  
+  return new Promise<boolean>((resolve, reject) => {
+    const promises = pool.publish(relays, deletion);
+    let successCount = 0;
+    let failureCount = 0;
+    const totalRelays = relays.length;
+    let resolved = false;
+    
+    promises.forEach((promise) => {
+      promise.then(() => {
+        successCount++;
+        if (successCount === 1 && !resolved) {
+          resolved = true;
+          resolve(true);
+        }
+      }).catch((error) => {
+        failureCount++;
+        if (failureCount === totalRelays && !resolved) {
+          resolved = true;
+          reject(new Error(`すべてのリレーでリアクション削除に失敗しました`));
+        }
+      });
+    });
+    
+    // タイムアウト処理（10秒）
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        if (successCount > 0) {
+          resolve(true);
+        } else {
+          reject(new Error("リアクション削除がタイムアウトしました"));
+        }
+      }
+    }, 10000);
+  });
+};
+
+// NIP-07を使ったリアクション削除
+export const deleteReactionWithNip07 = async (
+  reactionEventId: string,
+  reason: string = "リアクションを取り消しました"
+): Promise<boolean> => {
+  if (!window.nostr) {
+    throw new Error('NIP-07ブラウザ拡張機能が見つかりません');
+  }
+
+  try {
+    const pubkey = await window.nostr.getPublicKey();
+    
+    const event = {
+      kind: 5, // NIP-09 Event Deletion
+      content: reason,
+      tags: [] as string[][],
+      created_at: Math.floor(new Date().getTime() / 1000),
+      pubkey,
+    };
+    
+    // 削除対象のリアクションを参照
+    event.tags.push(["e", reactionEventId]);
+    
+    const signedEvent = await window.nostr.signEvent(event);
+    
+    return new Promise<boolean>((resolve, reject) => {
+      const promises = pool.publish(relays, signedEvent);
+      let successCount = 0;
+      let failureCount = 0;
+      const totalRelays = relays.length;
+      let resolved = false;
+      
+      promises.forEach((promise) => {
+        promise.then(() => {
+          successCount++;
+          if (successCount === 1 && !resolved) {
+            resolved = true;
+            resolve(true);
+          }
+        }).catch((error) => {
+          failureCount++;
+          if (failureCount === totalRelays && !resolved) {
+            resolved = true;
+            reject(new Error(`すべてのリレーでリアクション削除に失敗しました`));
+          }
+        });
+      });
+      
+      // タイムアウト処理（10秒）
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          if (successCount > 0) {
+            resolve(true);
+          } else {
+            reject(new Error("リアクション削除がタイムアウトしました"));
+          }
+        }
+      }, 10000);
+    });
+  } catch (error) {
+    throw new Error(`NIP-07でのリアクション削除に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
 
