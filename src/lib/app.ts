@@ -12,20 +12,10 @@ export function parseContent(text: string) {
   const imagePattern = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/g;
   const youtubePattern = /(https?:\/\/www\.youtube\.com\/watch\?v=[^\s]+)/g;
   
-  // NIP-30 カスタム絵文字パターン: :emoji_name:
-  const emojiPattern = /:([a-zA-Z0-9_+-]+):/g;
-
   const urls: string[] = text.match(urlPattern) || [];
   const twitterUrls: string[] = text.match(twitterPattern) || [];
   const imageUrls: string[] = text.match(imagePattern) || [];
   const youtubeUrls: string[] = text.match(youtubePattern) || [];
-  
-  // 絵文字名を抽出
-  const emojiNames: string[] = [];
-  let emojiMatch;
-  while ((emojiMatch = emojiPattern.exec(text)) !== null) {
-    emojiNames.push(emojiMatch[1]);
-  }
 
   const textWithoutUrls = text.replace(urlPattern, "").trim();
 
@@ -44,7 +34,6 @@ export function parseContent(text: string) {
     image_urls: imageUrls,
     youtube_urls: youtubeUrls,
     other_urls: otherUrls,
-    emoji_names: emojiNames,
   };
 }
 
@@ -68,8 +57,15 @@ export function processCustomEmojis(text: string, event: any): string {
 
   return text.replace(/:([a-zA-Z0-9_+-]+):/g, (match, shortcode) => {
     if (match.includes('custom-emoji')) return match;
-    const url = emojiMap[shortcode] || `https://emoji.example.com/${shortcode}.png`;
-    return `<img src="${url}" alt=":${shortcode}:" class="custom-emoji" title=":${shortcode}:" style="${style}" />`;
+    const url = emojiMap[shortcode];
+    
+    // 適切なURLが存在する場合のみ画像として表示
+    if (url && !url.includes('emoji.example.com')) {
+      return `<img src="${url}" alt=":${shortcode}:" class="custom-emoji" title=":${shortcode}:" style="${style}" />`;
+    }
+    
+    // URLが存在しない場合はそのままテキストとして表示
+    return match;
   });
 }
 
