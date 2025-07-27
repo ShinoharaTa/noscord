@@ -245,6 +245,11 @@
   }
 
   const submit = async () => {
+    // 空白や空文字の投稿を阻止
+    if (!postContent.trim()) {
+      return;
+    }
+    
     const useNip07 = getUseNip07();
     const seckey = getSecKey();
     
@@ -305,6 +310,10 @@
 
   const submitKeydown = (event: KeyboardEvent) => {
     if (event.ctrlKey && event.key === "Enter") {
+      // 空白や空文字の投稿を阻止
+      if (!postContent.trim()) {
+        return;
+      }
       submit();
     }
   };

@@ -27,6 +27,11 @@
   const submit = async () => {
     if (isSubmitting) return;
     
+    // 空白や空文字の投稿を阻止
+    if (!name.trim() || !postContent.trim()) {
+      return;
+    }
+    
     isSubmitting = true;
     const useNip07 = getUseNip07();
     const seckey = getSecKey();
