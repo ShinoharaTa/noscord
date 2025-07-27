@@ -8,6 +8,7 @@
     getChannelMeta,
     getSingleEvent,
     post,
+    postWithNip07,
     relays,
     req,
     checkRelayConnections,
@@ -16,6 +17,8 @@
     getSecKey,
     modal,
     settingsModal,
+    getUseNip07,
+    nip07Available,
   } from "$lib/store";
   import type { Nostr } from "nosvelte";
   import { Metadata, NostrApp, UniqueEventList } from "nosvelte";
@@ -170,7 +173,8 @@
   // ログイン状態をチェックする関数
   const checkLoginStatus = () => {
     const seckey = getSecKey();
-    isLoggedIn = !!seckey;
+    const useNip07 = getUseNip07();
+    isLoggedIn = !!seckey || (useNip07 && $nip07Available);
   };
 
   // DOM監視を開始
@@ -241,10 +245,20 @@
   }
 
   const submit = async () => {
+    const useNip07 = getUseNip07();
     const seckey = getSecKey();
-    if (!seckey) {
-      alert("投稿するには鍵の生成または登録が必要です");
-      return;
+    
+    // NIP-07を使用する場合とnsec1を使用する場合の分岐
+    if (useNip07) {
+      if (!$nip07Available) {
+        alert("ブラウザ拡張機能が利用できません。設定でnsec1方式に切り替えるか、拡張機能をインストールしてください。");
+        return;
+      }
+    } else {
+      if (!seckey) {
+        alert("投稿するには鍵の生成または登録が必要です");
+        return;
+      }
     }
     
     try {
@@ -257,7 +271,13 @@
         return;
       }
       
-      const result = await post(postContent, channel_id, seckey, replyId);
+      let result: boolean;
+      if (useNip07) {
+        result = await postWithNip07(postContent, channel_id, replyId);
+      } else {
+        result = await post(postContent, channel_id, seckey!, replyId);
+      }
+      
       if (result) {
         // 投稿内容とリプライ状態をクリア
         postContent = "";

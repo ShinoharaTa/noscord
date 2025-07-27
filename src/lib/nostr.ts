@@ -112,6 +112,80 @@ export const post = async (
   });
 };
 
+// NIP-07を使った投稿機能
+export const postWithNip07 = async (
+  content: string,
+  thread: string,
+  reply: string | null
+): Promise<boolean> => {
+  if (!window.nostr) {
+    throw new Error('NIP-07ブラウザ拡張機能が見つかりません');
+  }
+
+  try {
+    const pubkey = await window.nostr.getPublicKey();
+    
+    const event = {
+      kind: kinds.ChannelMessage,
+      content,
+      tags: [] as string[][],
+      created_at: Math.floor(new Date().getTime() / 1000),
+      pubkey,
+    };
+    
+    event.tags.push(["e", thread, "", "root"]);
+    if (reply) {
+      event.tags.push(["e", reply, "", "reply"]);
+    }
+    
+    // カスタム絵文字タグを追加
+    const emojiTags = extractEmojiTags(content);
+    emojiTags.forEach(([shortcode, url]) => {
+      event.tags.push(["emoji", shortcode, url]);
+    });
+    
+    const signedEvent = await window.nostr.signEvent(event);
+    
+    return new Promise<boolean>((resolve, reject) => {
+      const promises = pool.publish(relays, signedEvent);
+      let successCount = 0;
+      let failureCount = 0;
+      const totalRelays = relays.length;
+      let resolved = false;
+      
+      promises.forEach((promise) => {
+        promise.then(() => {
+          successCount++;
+          if (successCount === 1 && !resolved) {
+            resolved = true;
+            resolve(true);
+          }
+        }).catch((error) => {
+          failureCount++;
+          if (failureCount === totalRelays && !resolved) {
+            resolved = true;
+            reject(new Error(`すべてのリレーで投稿に失敗しました`));
+          }
+        });
+      });
+      
+      // タイムアウト処理（10秒）
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          if (successCount > 0) {
+            resolve(true);
+          } else {
+            reject(new Error("投稿がタイムアウトしました"));
+          }
+        }
+      }, 10000);
+    });
+  } catch (error) {
+    throw new Error(`NIP-07での署名に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
 export const newThread = async (
   name: string,
   about: string,
@@ -159,6 +233,66 @@ export const newThread = async (
       }
     }, 10000);
   });
+};
+
+// NIP-07を使ったチャンネル作成機能
+export const newThreadWithNip07 = async (
+  name: string,
+  about: string
+): Promise<string> => {
+  if (!window.nostr) {
+    throw new Error('NIP-07ブラウザ拡張機能が見つかりません');
+  }
+
+  try {
+    const pubkey = await window.nostr.getPublicKey();
+    
+    const content = {
+      name,
+      about,
+      picture: "https://nchan.shino3.net/channel_img.png",
+    };
+    
+    const event = {
+      kind: kinds.ChannelCreation,
+      content: JSON.stringify(content),
+      tags: [] as string[][],
+      created_at: Math.floor(new Date().getTime() / 1000),
+      pubkey,
+    };
+    
+    const signedEvent = await window.nostr.signEvent(event);
+    
+    return new Promise<string>((resolve, reject) => {
+      const promises = pool.publish(relays, signedEvent);
+      let successCount = 0;
+      let failureCount = 0;
+      const totalRelays = relays.length;
+      
+      promises.forEach((promise) => {
+        promise.then(() => {
+          successCount++;
+          if (successCount > 0) {
+            resolve(signedEvent.id);
+          }
+        }).catch((error) => {
+          failureCount++;
+          if (failureCount === totalRelays) {
+            reject(new Error(`すべてのリレーでチャンネル作成に失敗しました`));
+          }
+        });
+      });
+      
+      // タイムアウト処理（10秒）
+      setTimeout(() => {
+        if (successCount === 0) {
+          reject(new Error("チャンネル作成がタイムアウトしました"));
+        }
+      }, 10000);
+    });
+  } catch (error) {
+    throw new Error(`NIP-07でのチャンネル作成に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+  }
 };
 
 export const getSingleItem = async (params: { kind: number; id: string }): Promise<Event | null> => {

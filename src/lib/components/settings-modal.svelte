@@ -1,25 +1,47 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { settingsModal, getSecKey, saveToIdentifiedKey, removeIdentifiedKey } from '$lib/store';
+  import { 
+    settingsModal, 
+    getSecKey, 
+    saveToIdentifiedKey, 
+    removeIdentifiedKey,
+    checkNip07Availability,
+    getNip07PublicKey,
+    setUseNip07,
+    getUseNip07,
+    nip07Available,
+    nip07PubKey,
+    useNip07
+  } from '$lib/store';
   import { generateSecretKey } from 'nostr-tools';
-  import { bytesToHex } from '@noble/hashes/utils';
-  import { nsecEncode, decode } from 'nostr-tools/nip19';
+  import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+  import { nip19 } from 'nostr-tools';
   import Icon from './icons.svelte';
 
   let secretKey = '';
   let showSecretKey = false;
+  let nip07PublicKey = '';
+  let loadingNip07 = false;
 
-  onMount(() => {
+  onMount(async () => {
     // 既存の秘密鍵を読み込み（Hex形式をnsec1形式に変換）
     const existingKey = getSecKey();
     if (existingKey) {
       try {
         // Hex形式からnsec1形式に変換
-        secretKey = nsecEncode(existingKey);
+        secretKey = nip19.nsecEncode(hexToBytes(existingKey));
       } catch (error) {
         // 変換に失敗した場合はそのまま表示
         secretKey = existingKey;
       }
+    }
+
+    // NIP-07の可用性をチェック
+    checkNip07Availability();
+    
+    // 既存のNIP-07公開鍵を取得
+    if ($nip07Available && $useNip07) {
+      await loadNip07PublicKey();
     }
 
     // Escキーでモーダルを閉じる
@@ -53,8 +75,8 @@
       
       if (secretKey.startsWith('nsec1')) {
         // nsec1形式の場合はHex形式に変換
-        const decoded = decode(secretKey);
-        hexKey = bytesToHex(decoded.data);
+        const decoded = nip19.decode(secretKey);
+        hexKey = bytesToHex(decoded.data as Uint8Array);
       } else if (secretKey.length === 64) {
         // 既にHex形式の場合はそのまま使用
         hexKey = secretKey;
@@ -74,7 +96,7 @@
     const secretKeyBytes = generateSecretKey();
     const hexKey = bytesToHex(secretKeyBytes);
     // 新しく生成した鍵をnsec1形式で表示
-    secretKey = nsecEncode(hexKey);
+    secretKey = nip19.nsecEncode(hexToBytes(hexKey));
   };
 
   const toggleSecretKeyVisibility = () => {
@@ -91,6 +113,43 @@
       secretKey = '';
       alert('秘密鍵を削除しました。');
     }
+  };
+
+  // NIP-07関連の関数
+  const loadNip07PublicKey = async () => {
+    if (!$nip07Available) return;
+    
+    loadingNip07 = true;
+    try {
+      const pubkey = await getNip07PublicKey();
+      if (pubkey) {
+        nip07PublicKey = pubkey;
+      }
+    } catch (error) {
+      console.error('Failed to load NIP-07 public key:', error);
+      alert('ブラウザ拡張機能から公開鍵を取得できませんでした。');
+    } finally {
+      loadingNip07 = false;
+    }
+  };
+
+  const connectNip07 = async () => {
+    if (!$nip07Available) {
+      alert('NIP-07対応のブラウザ拡張機能（nos2x等）がインストールされていません。');
+      return;
+    }
+
+    await loadNip07PublicKey();
+    if (nip07PublicKey) {
+      setUseNip07(true);
+      alert('ブラウザ拡張機能との接続が完了しました。');
+    }
+  };
+
+  const disconnectNip07 = () => {
+    setUseNip07(false);
+    nip07PublicKey = '';
+    alert('ブラウザ拡張機能との接続を解除しました。');
   };
 </script>
 
@@ -171,6 +230,84 @@
               <strong>重要:</strong> 秘密鍵は安全に保管してください。この鍵を紛失すると、アカウントにアクセスできなくなります。
             </div>
           </div>
+        </div>
+
+        <!-- NIP-07 ブラウザ拡張機能セクション -->
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <Icon name="globe" size={20} />
+            <h3>ブラウザ拡張機能 (NIP-07)</h3>
+          </div>
+          <p class="section-description">nos2x等のブラウザ拡張機能を使用して安全に署名を行うことができます。</p>
+          
+          <div class="nip07-status">
+            {#if $nip07Available}
+              <div class="status-item status-available">
+                <Icon name="check-circle" size={16} />
+                <span>ブラウザ拡張機能が利用可能です</span>
+              </div>
+            {:else}
+              <div class="status-item status-unavailable">
+                <Icon name="x-circle" size={16} />
+                <span>ブラウザ拡張機能が見つかりません</span>
+              </div>
+            {/if}
+            
+            {#if $useNip07}
+              <div class="status-item status-connected">
+                <Icon name="link" size={16} />
+                <span>ブラウザ拡張機能を使用中</span>
+              </div>
+            {/if}
+          </div>
+
+          {#if $nip07Available}
+            <div class="nip07-section">
+              {#if $useNip07}
+                <div class="form-group">
+                  <label>公開鍵</label>
+                  <div class="public-key-display">
+                    <input
+                      type="text"
+                      value={nip07PublicKey || $nip07PubKey || '読み込み中...'}
+                      readonly
+                      class="form-input"
+                    />
+                  </div>
+                </div>
+                
+                <div class="form-actions">
+                  <button class="btn-secondary" on:click={disconnectNip07}>
+                    <Icon name="unlink" size={16} />
+                    <span>拡張機能との接続を解除</span>
+                  </button>
+                </div>
+              {:else}
+                <div class="form-actions">
+                  <button 
+                    class="btn-primary" 
+                    on:click={connectNip07}
+                    disabled={loadingNip07}
+                  >
+                    {#if loadingNip07}
+                      <Icon name="loader" size={16} />
+                      <span>接続中...</span>
+                    {:else}
+                      <Icon name="link" size={16} />
+                      <span>ブラウザ拡張機能と接続</span>
+                    {/if}
+                  </button>
+                </div>
+              {/if}
+            </div>
+          {:else}
+            <div class="info-box">
+              <Icon name="info" size={16} />
+              <div>
+                <strong>推奨:</strong> nos2x等のNIP-07対応ブラウザ拡張機能をインストールすると、より安全に署名を行うことができます。
+              </div>
+            </div>
+          {/if}
         </div>
 
         <!-- アプリについてセクション -->
@@ -458,6 +595,61 @@
 
   .btn-danger:hover {
     background: var(--danger-color-hover, #c82333);
+  }
+
+  /* NIP-07 styles */
+  .nip07-status {
+    margin-bottom: 16px;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+
+  .status-available {
+    background: var(--success-bg, #d4edda);
+    color: var(--success-color, #155724);
+    border: 1px solid var(--success-border, #c3e6cb);
+  }
+
+  .status-unavailable {
+    background: var(--warning-bg, #fff3cd);
+    color: var(--warning-color, #856404);
+    border: 1px solid var(--warning-border, #ffeaa7);
+  }
+
+  .status-connected {
+    background: var(--info-bg, #d1ecf1);
+    color: var(--info-color, #0c5460);
+    border: 1px solid var(--info-border, #bee5eb);
+  }
+
+  .nip07-section {
+    margin-top: 16px;
+  }
+
+  .public-key-display input {
+    font-family: monospace;
+    font-size: 0.85rem;
+    background: var(--input-bg, #f8f9fa);
+    border: 1px solid var(--border-color, #e3e5e8);
+  }
+
+  .info-box {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: var(--info-bg, #f0f9ff);
+    border: 1px solid var(--info-border, #0ea5e9);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.4;
   }
 
   .warning-box {

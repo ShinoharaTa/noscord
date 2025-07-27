@@ -2,8 +2,8 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { newThread, post } from "$lib/nostr";
-  import { getSecKey, settingsModal } from "$lib/store";
+  import { newThread, newThreadWithNip07, post, postWithNip07 } from "$lib/nostr";
+  import { getSecKey, settingsModal, getUseNip07, nip07Available } from "$lib/store";
   import Icon from "$lib/components/icons.svelte";
   import "websocket-polyfill";
   const channel_id: string = $page.params.channel_id;
@@ -19,7 +19,8 @@
   // ログイン状態をチェック
   onMount(() => {
     const seckey = getSecKey();
-    isLoggedIn = !!seckey;
+    const useNip07 = getUseNip07();
+    isLoggedIn = !!seckey || (useNip07 && $nip07Available);
     isChecking = false;
   });
 
@@ -27,21 +28,44 @@
     if (isSubmitting) return;
     
     isSubmitting = true;
+    const useNip07 = getUseNip07();
     const seckey = getSecKey();
-    if (!seckey) {
-      alert("投稿するには鍵の生成または登録が必要です");
-      isSubmitting = false;
-      return;
+    
+    // NIP-07を使用する場合とnsec1を使用する場合の分岐
+    if (useNip07) {
+      if (!$nip07Available) {
+        alert("ブラウザ拡張機能が利用できません。設定でnsec1方式に切り替えるか、拡張機能をインストールしてください。");
+        isSubmitting = false;
+        return;
+      }
+    } else {
+      if (!seckey) {
+        alert("投稿するには鍵の生成または登録が必要です");
+        isSubmitting = false;
+        return;
+      }
     }
     
     try {
-      const threadId = await newThread(name, "", seckey);
+      let threadId: string;
+      if (useNip07) {
+        threadId = await newThreadWithNip07(name, "");
+      } else {
+        threadId = await newThread(name, "", seckey!);
+      }
+      
       if (!threadId) {
         isSubmitting = false;
         return;
       }
       
-      const result = await post(postContent, threadId, seckey, null);
+      let result: boolean;
+      if (useNip07) {
+        result = await postWithNip07(postContent, threadId, null);
+      } else {
+        result = await post(postContent, threadId, seckey!, null);
+      }
+      
       if (result) {
         alert("新しいチャンネルを作成しました！");
         goto(`/${threadId}`);

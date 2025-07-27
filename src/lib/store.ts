@@ -5,6 +5,11 @@ const seckey = writable<string | null>(null);
 const anonymous = writable<string | null>(null);
 const expire = writable<string | null>(null);
 
+// NIP-07 Browser Extension Support
+const nip07Available = writable<boolean>(false);
+const nip07PubKey = writable<string | null>(null);
+const useNip07 = writable<boolean>(false);
+
 function getLocalStorage() {
   try {
     const localStorageItem = localStorage.getItem("nchan_keys_v1");
@@ -35,6 +40,8 @@ function initializeStores() {
     localStorage.removeItem("nchan_private_key");
     localStorage.removeItem("nchan_private_key_expire");
     getLocalStorage();
+    loadNip07Preference();
+    checkNip07Availability();
   }
 }
 
@@ -78,6 +85,54 @@ export function getAnonymousKey(): string | null {
 export function getSecKey(): string | null {
   return get(seckey);
 }
+
+// NIP-07関連の関数
+export function checkNip07Availability(): boolean {
+  if (typeof window === 'undefined') return false;
+  const available = !!(window.nostr && typeof window.nostr.signEvent === 'function');
+  nip07Available.set(available);
+  return available;
+}
+
+export async function getNip07PublicKey(): Promise<string | null> {
+  try {
+    if (!checkNip07Availability()) return null;
+    const pubkey = await window.nostr!.getPublicKey();
+    nip07PubKey.set(pubkey);
+    return pubkey;
+  } catch (error) {
+    console.error('Failed to get NIP-07 public key:', error);
+    nip07PubKey.set(null);
+    return null;
+  }
+}
+
+export function setUseNip07(value: boolean) {
+  useNip07.set(value);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('nchan_use_nip07', JSON.stringify(value));
+  }
+}
+
+export function getUseNip07(): boolean {
+  return get(useNip07);
+}
+
+export function loadNip07Preference() {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('nchan_use_nip07');
+      if (saved) {
+        useNip07.set(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn('Failed to load NIP-07 preference:', e);
+    }
+  }
+}
+
+// Export stores
+export { nip07Available, nip07PubKey, useNip07 };
 
 initializeStores();
 
