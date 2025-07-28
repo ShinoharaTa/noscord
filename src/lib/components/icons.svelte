@@ -17,7 +17,8 @@
     ChevronRight,
     Smile,
     Loader,
-    Star
+    Star,
+    Image
   } from 'lucide-svelte';
 
   export let name: string;
@@ -44,7 +45,8 @@
     right: ChevronRight,
     smile: Smile,
     loader: Loader,
-    star: Star
+    star: Star,
+    image: Image
   };
 
   $: IconComponent = iconMap[name as keyof typeof iconMap];

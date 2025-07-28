@@ -19,6 +19,41 @@
   // カスタム絵文字で処理されたテキスト
   const processedText = processCustomEmojis(parsed.text_without_urls, event);
   
+  // 画像URL抽出（NIP-92対応）
+  const extractImages = (event: Nostr.Event) => {
+    const images: string[] = [];
+    
+    // imetaタグから画像URLを取得（NIP-92）
+    const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
+    imetaTags.forEach(tag => {
+      // imetaタグの形式: ["imeta", "url <url>", "m <mime-type>", ...]
+      for (let i = 1; i < tag.length; i++) {
+        if (tag[i].startsWith('url ')) {
+          const url = tag[i].substring(4); // "url "を除去
+          images.push(url);
+        }
+      }
+    });
+    
+    // contentから画像URLを抽出（改行区切り）
+    const lines = event.content.split('\n');
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      // HTTP/HTTPSで始まる画像URL
+      if (/^https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|bmp)(?:\?[^\s]*)?$/i.test(trimmedLine)) {
+        images.push(trimmedLine);
+      }
+      // Base64画像データ
+      if (trimmedLine.startsWith('data:image/')) {
+        images.push(trimmedLine);
+      }
+    });
+    
+    return [...new Set(images)]; // 重複を除去
+  };
+  
+  const eventImages = extractImages(event);
+  
   // 画像ビューアーの状態管理
   let isImageModalOpen = false;
   let currentImageIndex = 0;
@@ -322,9 +357,9 @@
         </a>
       </p>
     {/each}
-    {#if parsed.image_urls.length > 0}
+    {#if eventImages.length > 0}
       <div class="image-gallery">
-        {#each parsed.image_urls as image, index}
+        {#each eventImages as image, index}
           <button class="image-item" on:click={() => openImageModal(image, index)}>
             <img src={image} alt="" />
           </button>
@@ -409,7 +444,7 @@
       <div class="image-modal-content">
         <img src={currentImageUrl} alt="" class="modal-image" />
         
-        {#if parsed.image_urls.length > 1}
+        {#if eventImages.length > 1}
           <div class="image-navigation">
             <button 
               class="nav-button nav-prev" 
@@ -421,13 +456,13 @@
             <button 
               class="nav-button nav-next" 
               on:click={nextImage}
-              disabled={currentImageIndex === parsed.image_urls.length - 1}
+              disabled={currentImageIndex === eventImages.length - 1}
             >
               <Icon name="right" size={24} />
             </button>
             
             <div class="image-counter">
-              {currentImageIndex + 1} / {parsed.image_urls.length}
+              {currentImageIndex + 1} / {eventImages.length}
             </div>
           </div>
         {/if}

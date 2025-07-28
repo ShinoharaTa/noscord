@@ -13,6 +13,8 @@
     req,
     checkRelayConnections,
   } from "$lib/nostr";
+  import { finalizeEvent } from "nostr-tools";
+  import { hexToBytes } from "@noble/hashes/utils";
   import {
     getSecKey,
     modal,
@@ -73,6 +75,10 @@
   let channelName = "";
   
   let postContent = "";
+  let selectedImages: File[] = [];
+  let imagePreviewUrls: string[] = [];
+  let isUploading = false;
+  let uploadProgress = "";
   let replyId: string | null = null;
   let parentEvent: any;
   let replyToEvent: any = null;
@@ -159,6 +165,9 @@
   // 状態をリセットする関数
   const resetChannelState = () => {
     postContent = "";
+    selectedImages = [];
+    imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    imagePreviewUrls = [];
     replyId = null;
     parentEvent = null;
     replyToEvent = null;
@@ -238,12 +247,165 @@
     previousChannelId = channel_id;
   }
 
-  $: submitDisabled = !postContent.trim();
+  $: submitDisabled = !postContent.trim() || isUploading;
 
   // textareaの初期化
   $: if (textareaElement) {
     initializeTextarea(textareaElement);
   }
+
+  // 画像選択処理
+  const handleImageSelect = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      const files = Array.from(input.files);
+      for (const file of files) {
+        if (file.type.startsWith('image/')) {
+          selectedImages.push(file);
+          imagePreviewUrls.push(URL.createObjectURL(file));
+        }
+      }
+      selectedImages = selectedImages; // リアクティブ更新をトリガー
+      imagePreviewUrls = imagePreviewUrls; // リアクティブ更新をトリガー
+    }
+    // inputをリセット
+    input.value = '';
+  };
+
+  // 画像削除処理
+  const removeImage = (index: number) => {
+    URL.revokeObjectURL(imagePreviewUrls[index]);
+    selectedImages.splice(index, 1);
+    imagePreviewUrls.splice(index, 1);
+    selectedImages = selectedImages; // リアクティブ更新をトリガー
+    imagePreviewUrls = imagePreviewUrls; // リアクティブ更新をトリガー
+  };
+
+  // 画像をBase64に変換
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // NIP-98認証ヘッダーを生成
+  const createNip98AuthHeader = async (url: string, method: string, payload?: Uint8Array) => {
+    const useNip07 = getUseNip07();
+    const seckey = getSecKey();
+    
+    try {
+      const authEvent = {
+        kind: 27235, // NIP-98
+        content: '',
+        tags: [
+          ['u', url],
+          ['method', method]
+        ],
+        created_at: Math.floor(Date.now() / 1000)
+      };
+      
+      // ペイロードのハッシュを追加（ある場合）
+      if (payload) {
+        const hashBuffer = await crypto.subtle.digest('SHA-256', payload);
+        const hashArray = new Uint8Array(hashBuffer);
+        const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+        authEvent.tags.push(['payload', hashHex]);
+      }
+      
+      let signedEvent;
+             if (useNip07 && window.nostr) {
+         signedEvent = await window.nostr.signEvent(authEvent);
+       } else if (seckey) {
+         signedEvent = finalizeEvent(authEvent, hexToBytes(seckey));
+       } else {
+         throw new Error('認証情報がありません');
+       }
+      
+      return 'Nostr ' + btoa(JSON.stringify(signedEvent));
+    } catch (error) {
+      console.error('NIP-98認証ヘッダー生成エラー:', error);
+      throw error;
+    }
+  };
+
+  // 画像アップロード（nostr.buildのみ使用）
+  const uploadImages = async (images: File[]): Promise<string[]> => {
+    const uploadPromises = images.map(async (image) => {
+      // より大きなサイズ（500KB以下）もBase64で処理を試行
+      if (image.size <= 500 * 1024) {
+        try {
+          const base64 = await convertToBase64(image);
+          console.log(`Image converted to Base64: ${image.name} (${image.size} bytes)`);
+          return base64;
+        } catch (error) {
+          console.error('Base64 conversion failed:', error);
+          // Base64変換に失敗した場合は外部アップロードにフォールバック
+        }
+      }
+      
+      // nostr.buildへのアップロード
+      try {
+        console.log(`Uploading to nostr.build: ${image.name} (${image.size} bytes)`);
+        uploadProgress = `画像をアップロード中: ${image.name}`;
+        
+        const formData = new FormData();
+        formData.append('file', image);
+        
+        // ファイルデータをUint8Arrayに変換してNIP-98認証用
+        const arrayBuffer = await image.arrayBuffer();
+        const fileBytes = new Uint8Array(arrayBuffer);
+        
+        const authHeader = await createNip98AuthHeader('https://nostr.build/api/v2/upload/files', 'POST', fileBytes);
+        
+        const response = await fetch('https://nostr.build/api/v2/upload/files', {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`nostr.build upload error (${response.status}):`, errorText);
+          throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('nostr.build upload result:', result);
+        
+        // nostr.buildのレスポンス形式に応じて調整
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+          const imageUrl = result.data[0].url;
+          if (imageUrl && imageUrl.startsWith('http')) {
+            console.log(`Successfully uploaded to nostr.build: ${imageUrl}`);
+            return imageUrl;
+          }
+        }
+        
+        throw new Error('nostr.buildから有効なURLが返されませんでした');
+      } catch (error) {
+        console.error('nostr.build upload failed:', error);
+        
+        // nostr.buildが失敗した場合、Base64にフォールバック（サイズに関係なく）
+        console.warn('nostr.build failed, falling back to Base64 encoding...');
+        try {
+          const base64 = await convertToBase64(image);
+          console.log(`Fallback Base64 conversion successful: ${image.name} (${image.size} bytes)`);
+          return base64;
+        } catch (base64Error) {
+          console.error('Fallback Base64 conversion also failed:', base64Error);
+          throw new Error(`画像の処理に失敗しました: ${image.name}`);
+        }
+      }
+      
+    });
+    
+    return Promise.all(uploadPromises);
+  };
 
   const submit = async () => {
     // 空白や空文字の投稿を阻止
@@ -277,18 +439,39 @@
         return;
       }
       
+      // 画像がある場合はアップロード
+      let imageUrls: string[] = [];
+      if (selectedImages.length > 0) {
+        isUploading = true;
+        uploadProgress = "画像をアップロード中...";
+        try {
+          imageUrls = await uploadImages(selectedImages);
+        } catch (error) {
+          isUploading = false;
+          uploadProgress = "";
+          alert(`画像のアップロードに失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+          return;
+        }
+      }
+      
+      uploadProgress = "投稿中...";
       let result: boolean;
       if (useNip07) {
-        result = await postWithNip07(postContent, channel_id, replyId);
+        result = await postWithNip07(postContent, channel_id, replyId, imageUrls);
       } else {
-        result = await post(postContent, channel_id, seckey!, replyId);
+        result = await post(postContent, channel_id, seckey!, replyId, imageUrls);
       }
       
       if (result) {
-        // 投稿内容とリプライ状態をクリア
+        // 投稿内容、画像、リプライ状態をクリア
         postContent = "";
+        selectedImages = [];
+        imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+        imagePreviewUrls = [];
         replyId = null;
         replyToEvent = null;
+        isUploading = false;
+        uploadProgress = "";
         
         // 投稿後は一番下までスクロール（強制実行）
         shouldScrollToBottom = true;
@@ -301,10 +484,12 @@
         // textareaの高さをリセット
         if (textareaElement) {
           textareaElement.style.height = 'auto';
-          textareaElement.style.height = Math.max(textareaElement.scrollHeight, 52) + 'px';
+          textareaElement.style.height = Math.max(textareaElement.scrollHeight, 44) + 'px';
         }
       }
     } catch (error) {
+      isUploading = false;
+      uploadProgress = "";
       alert(`投稿に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
@@ -357,8 +542,8 @@
       textarea.style.height = 'auto';
       const scrollHeight = textarea.scrollHeight;
       
-      // 適切な高さを計算（最小52px、最大160px）
-      const newHeight = Math.min(Math.max(scrollHeight, 52), 160);
+      // 適切な高さを計算（最小44px、最大160px）
+      const newHeight = Math.min(Math.max(scrollHeight, 44), 160);
       
       // 高さを設定
       textarea.style.height = newHeight + 'px';
@@ -370,7 +555,7 @@
     if (textarea && !textarea.style.height) {
       textarea.style.height = 'auto';
       const scrollHeight = textarea.scrollHeight;
-      textarea.style.height = Math.max(scrollHeight, 52) + 'px';
+      textarea.style.height = Math.max(scrollHeight, 44) + 'px';
     }
   };
 
@@ -667,6 +852,35 @@
                   {/if}
                 </div>
               {/if}
+              <!-- 画像プレビューエリア -->
+              <div class="image-preview-container">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  on:change={handleImageSelect}
+                  class="image-input"
+                  id="image-input"
+                />
+                <label for="image-input" class="image-add-button">
+                  <Icon name="image" size={18} />
+                </label>
+                {#if imagePreviewUrls.length > 0}
+                  {#each imagePreviewUrls as imageUrl, index}
+                    <div class="image-preview-item">
+                      <img src={imageUrl} alt="プレビュー" class="image-preview" />
+                      <button 
+                        class="image-remove-button" 
+                        on:click={() => removeImage(index)}
+                        type="button"
+                      >
+                        <Icon name="x" size={12} />
+                      </button>
+                    </div>
+                  {/each}
+                {/if}
+              </div>
+              
               <div class="input-container">
                 <textarea 
                   bind:value={postContent} 
@@ -677,14 +891,20 @@
                   class="message-input"
                   rows="1"
                 ></textarea>
-                <button 
-                  class="send-button" 
-                  on:click={submit} 
-                  type="button" 
-                  disabled={submitDisabled}
-                >
-                  <Icon name="send" size={16} />
-                </button>
+                <div class="button-group">
+                  <button 
+                    class="send-button" 
+                    on:click={submit} 
+                    type="button" 
+                    disabled={submitDisabled}
+                  >
+                    {#if isUploading}
+                      <Icon name="loader" size={16} />
+                    {:else}
+                      <Icon name="send" size={16} />
+                    {/if}
+                  </button>
+                </div>
               </div>
             {:else}
               <div class="login-prompt">
@@ -705,6 +925,17 @@
     </NostrApp>
   {/key}
 </div>
+
+<!-- アップロード中のローディングオーバーレイ -->
+{#if isUploading}
+  <div class="upload-overlay">
+    <div class="upload-modal">
+      <div class="upload-spinner"></div>
+      <p class="upload-text">{uploadProgress}</p>
+      <p class="upload-subtext">しばらくお待ちください...</p>
+    </div>
+  </div>
+{/if}
 
 <style>
   .chat-channel {
@@ -997,16 +1228,195 @@
     align-items: flex-end;
   }
 
+  .button-group {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .image-input {
+    display: none;
+  }
+
+  .image-add-button {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--secondary-text);
+    flex-shrink: 0;
+  }
+
+  .image-add-button:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+
+  .image-preview-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .image-preview-item {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 12px;
+    overflow: visible;
+    border: 2px solid var(--border-color);
+  }
+
+  .image-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+
+  .image-remove-button {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: rgba(107, 114, 128, 0.9);
+    color: white;
+    border: 1px solid white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .image-remove-button:hover {
+    background: rgba(75, 85, 99, 0.95);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .image-remove-button :global(svg) {
+    width: 12px !important;
+    height: 12px !important;
+    flex-shrink: 0;
+  }
+
+  /* モバイル向けの画像プレビュー調整 */
+  @media (max-width: 768px) {
+    .image-preview-container {
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .image-add-button {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+    }
+
+    .image-add-button :global(svg) {
+      width: 16px;
+      height: 16px;
+    }
+
+    .image-preview-item {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+    }
+
+    .image-preview {
+      border-radius: 6px;
+    }
+
+    .image-remove-button {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      min-height: 20px;
+      top: -6px;
+      right: -6px;
+    }
+
+    .image-remove-button :global(svg) {
+      width: 10px !important;
+      height: 10px !important;
+    }
+  }
+
+  /* 小さな画面では画像を小さく */
+  @media (max-width: 480px) {
+    .image-preview-container {
+      gap: 6px;
+    }
+
+    .image-add-button {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+    }
+
+    .image-add-button :global(svg) {
+      width: 14px;
+      height: 14px;
+    }
+
+    .image-preview-item {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+    }
+
+    .image-preview {
+      border-radius: 4px;
+    }
+
+    .image-remove-button {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      min-height: 18px;
+      top: -5px;
+      right: -5px;
+    }
+
+    .image-remove-button :global(svg) {
+      width: 8px !important;
+      height: 8px !important;
+    }
+  }
+
   .message-input {
     flex: 1;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--input-bg);
-    padding: 14px 16px;
+    padding: 10px 12px;
     font-size: 1rem;
     line-height: 1.5;
     resize: none;
-    min-height: 52px;
+    min-height: 44px;
     max-height: 160px;
     outline: none;
     transition: all 0.2s;
@@ -1032,7 +1442,7 @@
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 14px 24px;
+    padding: 10px 18px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
@@ -1041,7 +1451,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 52px;
+    min-height: 44px;
     box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
   }
 
@@ -1134,12 +1544,28 @@
       align-items: stretch;
     }
 
-    .send-button {
+    .button-group {
       width: 100%;
+      justify-content: space-between;
+    }
+
+    .image-button {
+      flex: 0 0 auto;
+      min-height: 48px;
+      padding: 12px;
+    }
+
+    .send-button {
+      flex: 1;
       height: 48px;
       padding: 12px 16px;
       justify-content: center;
       font-size: 1rem;
+    }
+
+    .image-preview-container {
+      margin: 0 0 12px 0;
+      max-width: none;
     }
 
     .message-input {
@@ -1195,5 +1621,59 @@
   /* デバッグ用要素を非表示 */
   .hidden-debug {
     display: none;
+  }
+
+  /* アップロード中のローディングオーバーレイ */
+  .upload-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+  }
+
+  .upload-modal {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    max-width: 400px;
+    width: 90%;
+  }
+
+  .upload-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 24px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .upload-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0 0 8px 0;
+  }
+
+  .upload-subtext {
+    font-size: 0.9rem;
+    color: var(--secondary-text);
+    margin: 0;
   }
 </style>

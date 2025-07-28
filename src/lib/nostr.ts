@@ -26,7 +26,8 @@ export const post = async (
   content: string,
   thread: string,
   seckey: string,
-  reply: string | null
+  reply: string | null,
+  imageUrls: string[] = []
 ) => {
   const seckeyBytes = hexToBytes(seckey);
   const event: UnsignedEvent = {
@@ -39,6 +40,27 @@ export const post = async (
   event.tags.push(["e", thread, "", "root"]);
   if (reply) {
     event.tags.push(["e", reply, "", "reply"]);
+  }
+  
+  // 画像URLがある場合はimetaタグとcontentに追加（NIP-92準拠）
+  if (imageUrls && imageUrls.length > 0) {
+    const urls = imageUrls.filter(url => !url.startsWith('data:'));
+    const base64Images = imageUrls.filter(url => url.startsWith('data:'));
+    
+    // 外部画像URLはimetaタグとcontentに追加
+    if (urls.length > 0) {
+      urls.forEach(url => {
+        // imetaタグを追加（NIP-92）
+        event.tags.push(["imeta", `url ${url}`, `m image/jpeg`]);
+      });
+      // contentに画像URLを追加
+      event.content = content + '\n\n' + urls.join('\n');
+    }
+    
+    // Base64画像はcontentに直接追加
+    if (base64Images.length > 0) {
+      event.content = content + '\n\n' + base64Images.join('\n');
+    }
   }
   
   // カスタム絵文字タグの追加は現在無効化（表示のみサポート）
@@ -94,7 +116,8 @@ export const post = async (
 export const postWithNip07 = async (
   content: string,
   thread: string,
-  reply: string | null
+  reply: string | null,
+  imageUrls: string[] = []
 ): Promise<boolean> => {
   if (!window.nostr) {
     throw new Error('NIP-07ブラウザ拡張機能が見つかりません');
@@ -114,6 +137,27 @@ export const postWithNip07 = async (
     event.tags.push(["e", thread, "", "root"]);
     if (reply) {
       event.tags.push(["e", reply, "", "reply"]);
+    }
+    
+    // 画像URLがある場合はimetaタグとcontentに追加（NIP-92準拠）
+    if (imageUrls && imageUrls.length > 0) {
+      const urls = imageUrls.filter(url => !url.startsWith('data:'));
+      const base64Images = imageUrls.filter(url => url.startsWith('data:'));
+      
+              // 外部画像URLはimetaタグとcontentに追加
+        if (urls.length > 0) {
+          urls.forEach(url => {
+            // imetaタグを追加（NIP-92）
+            event.tags.push(["imeta", `url ${url}`, `m image/jpeg`]);
+          });
+          // contentに画像URLを追加
+          event.content = content + '\n\n' + urls.join('\n');
+        }
+      
+      // Base64画像はcontentに直接追加
+      if (base64Images.length > 0) {
+        event.content = content + '\n\n' + base64Images.join('\n');
+      }
     }
     
     // カスタム絵文字タグの追加は現在無効化（表示のみサポート）

@@ -66,9 +66,9 @@
       
       let result: boolean;
       if (useNip07) {
-        result = await postWithNip07(postContent, threadId, null);
+        result = await postWithNip07(postContent, threadId, null, []);
       } else {
-        result = await post(postContent, threadId, seckey!, null);
+        result = await post(postContent, threadId, seckey!, null, []);
       }
       
       if (result) {
