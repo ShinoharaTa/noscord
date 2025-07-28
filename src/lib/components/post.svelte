@@ -341,7 +341,7 @@
   {#if action}
     <div class="post-actions">
       <button class="reply-btn small" on:click={onClickReply(event.id)}>
-        <Icon name="reply" size={14} />
+        <Icon name="reply" size={16} />
       </button>
       
       <!-- ⭐リアクションボタン -->
@@ -354,9 +354,9 @@
           title="リアクション済み: {starReaction?.hasCurrentUser}, ユーザー: {currentUserPubkey?.slice(0,8)}"
         >
           {#if addingReaction}
-            <Icon name="loader" size={14} />
+            <Icon name="loader" size={16} />
           {:else}
-            <Icon name="star" size={14} />
+            <span class="reaction-emoji">⭐️</span>
           {/if}
           {#if starReaction && starReaction.count > 1}
             {starReaction.count}
@@ -369,9 +369,9 @@
           disabled={addingReaction}
         >
           {#if addingReaction}
-            <Icon name="loader" size={14} />
+            <Icon name="loader" size={16} />
           {:else}
-            <Icon name="star" size={14} />
+            <span class="reaction-emoji">⭐️</span>
           {/if}
         </button>
       {/if}
@@ -532,10 +532,10 @@
   .post-content .custom-emoji {
     display: inline-block !important;
     vertical-align: middle !important;
-    width: 1em !important;
-    height: 1em !important;
-    max-width: 1em !important;
-    max-height: 1em !important;
+    width: 1.3em !important;
+    height: 1.3em !important;
+    max-width: 1.3em !important;
+    max-height: 1.3em !important;
     aspect-ratio: 1 / 1 !important;
     margin: 0 0.1em !important;
     border-radius: 2px !important;
@@ -656,16 +656,18 @@
   .reply-btn {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
+    gap: 6px;
+    padding: 6px 12px;
     border: none;
     background: #4a5568;
     color: white;
-    font-size: 0.75rem;
-    border-radius: 4px;
+    font-size: 0.875rem;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
     font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+    min-height: 2.25em;
   }
 
   .reply-btn:hover {
@@ -810,16 +812,18 @@
   .reaction-btn {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
+    gap: 6px;
+    padding: 6px 12px;
     border: none;
     background: #4a5568;
     color: white;
-    font-size: 0.75rem;
-    border-radius: 4px;
+    font-size: 0.875rem;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
     font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+    min-height: 2.25em; /* line-height 1.5 * 1.5em = 投稿テキストに合わせる */
   }
 
   .reaction-btn:hover {
@@ -837,8 +841,14 @@
   }
 
   .reaction-emoji {
-    font-size: 1em;
+    font-size: 1.1em;
     line-height: 1;
+  }
+
+  /* リアクションボタン内の絵文字はマージンを除去 */
+  .reaction-btn .reaction-emoji,
+  .reaction-btn .custom-emoji {
+    margin: 0 !important;
   }
 
   /* リアクション絵文字画像用のスタイル */
@@ -850,6 +860,12 @@
     object-fit: contain !important;
     max-width: 1.2em !important;
     max-height: 1.2em !important;
+    margin: 0 !important;
+  }
+
+  /* リアクションボタン内の絵文字画像は特別にマージン調整 */
+  .reaction-btn :global(.reaction-emoji-img) {
+    margin: 0 !important;
   }
 
 
