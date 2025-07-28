@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { parseContent, parseCreated, parseTimeOnly, processCustomEmojis, aggregateReactions, sanitizeReactionContent, type ReactionSummary } from "$lib/app";
+  import { parseContent, parseCreated, parseTimeOnly, processCustomEmojis, aggregateReactions, sanitizeReactionContent, processReactionEmoji, type ReactionSummary } from "$lib/app";
   import { getReactions, react, reactWithNip07, deleteReaction, deleteReactionWithNip07 } from "$lib/nostr";
   import { getSecKey, getUseNip07, nip07Available } from "$lib/store";
   import type { Nostr } from "nosvelte";
@@ -28,6 +28,7 @@
   let reactions: ReactionSummary[] = [];
   let loadingReactions = false;
   let addingReaction = false;
+  let pendingReactions = new Set<string>(); // 処理中のリアクションを追跡
   
   // 現在のユーザーの公開鍵を取得
   let currentUserPubkey = '';
@@ -100,27 +101,53 @@
   
   // リアクションを送信または削除
   const sendReaction = async (reactionContent: string) => {
-    if (addingReaction) return;
+    if (addingReaction || pendingReactions.has(reactionContent)) return;
     
     const sanitized = sanitizeReactionContent(reactionContent);
     if (!sanitized) return;
     
+    pendingReactions.add(reactionContent);
+    
     // 既に自分がそのリアクションをしているかチェック
     const existingReaction = reactions.find(r => r.content === sanitized && r.hasCurrentUser);
+    
+    console.log('リアクション処理デバッグ:', {
+      originalContent: reactionContent,
+      sanitized: sanitized,
+      existingReaction: existingReaction,
+      hasCurrentUser: existingReaction?.hasCurrentUser,
+      currentUserReactionId: existingReaction?.currentUserReactionId,
+      allReactions: reactions.map(r => ({
+        content: r.content,
+        hasCurrentUser: r.hasCurrentUser,
+        currentUserReactionId: r.currentUserReactionId
+      }))
+    });
     
     addingReaction = true;
     try {
       const useNip07 = getUseNip07();
       let success = false;
       
-      if (existingReaction && existingReaction.currentUserReactionId) {
+      // サーバーから最新のリアクション状態を確認
+      const latestReactions = await getReactions(event.id);
+      const latestAggregated = aggregateReactions(latestReactions, currentUserPubkey);
+      const latestExistingReaction = latestAggregated.find(r => r.content === sanitized && r.hasCurrentUser);
+      
+      console.log('最新リアクション状態確認:', {
+        localExisting: existingReaction,
+        latestExisting: latestExistingReaction,
+        shouldDelete: !!latestExistingReaction?.currentUserReactionId
+      });
+      
+      if (latestExistingReaction && latestExistingReaction.currentUserReactionId) {
         // 既存のリアクションを削除
         if (useNip07 && $nip07Available) {
-          success = await deleteReactionWithNip07(existingReaction.currentUserReactionId);
+          success = await deleteReactionWithNip07(latestExistingReaction.currentUserReactionId!);
         } else {
           const seckey = getSecKey();
           if (seckey) {
-            success = await deleteReaction(existingReaction.currentUserReactionId, seckey);
+            success = await deleteReaction(latestExistingReaction.currentUserReactionId!, seckey);
           } else {
             alert('リアクション削除にはログインが必要です');
             return;
@@ -141,15 +168,57 @@
         }
       }
       
-              if (success) {
-          // リアクションを再読み込み
-          await loadReactions();
+                    if (success) {
+        // 即座にローカル状態を更新（UX改善）
+        if (latestExistingReaction && latestExistingReaction.currentUserReactionId) {
+          // 削除の場合：該当リアクションを更新
+          const reactionIndex = reactions.findIndex(r => r.content === sanitized);
+          if (reactionIndex !== -1) {
+            if (reactions[reactionIndex].count > 1) {
+              reactions[reactionIndex].count--;
+              reactions[reactionIndex].hasCurrentUser = false;
+              reactions[reactionIndex].currentUserReactionId = undefined;
+              // ユーザーリストからも削除
+              reactions[reactionIndex].users = reactions[reactionIndex].users.filter(u => u !== currentUserPubkey);
+            } else {
+              reactions.splice(reactionIndex, 1);
+            }
+            reactions = [...reactions]; // リアクティブ更新をトリガー
+          }
+        } else {
+          // 追加の場合：即座に表示
+          const existingIndex = reactions.findIndex(r => r.content === sanitized);
+          if (existingIndex !== -1) {
+            reactions[existingIndex].count++;
+            reactions[existingIndex].hasCurrentUser = true;
+            reactions[existingIndex].currentUserReactionId = 'pending'; // 一時的なID
+            // ユーザーリストに追加
+            if (!reactions[existingIndex].users.includes(currentUserPubkey)) {
+              reactions[existingIndex].users.push(currentUserPubkey);
+            }
+          } else {
+            reactions.push({
+              content: sanitized,
+              count: 1,
+              users: [currentUserPubkey],
+              hasCurrentUser: true,
+              currentUserReactionId: 'pending' // 一時的なID
+            });
+          }
+          reactions = [...reactions];
         }
+        
+        // 少し遅延してからバックグラウンドでリアクションを再読み込み（正確な状態同期）
+        setTimeout(() => {
+          loadReactions();
+        }, 500);
+      }
     } catch (error) {
       console.error('リアクション処理エラー:', error);
       alert('リアクションの処理に失敗しました');
     } finally {
       addingReaction = false;
+      pendingReactions.delete(reactionContent);
     }
   };
   
@@ -175,7 +244,20 @@
   onMount(async () => {
     await updateCurrentUserPubkey();
     await loadReactions();
+    
+    // ページがフォーカスを取り戻した時にリアクションを再読み込み
+    const handleFocus = () => {
+      loadReactions();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   });
+  
+
   
   // キーボードイベント
   function handleKeydown(event: KeyboardEvent) {
@@ -268,7 +350,8 @@
         <button 
           class="reaction-btn small {starReaction?.hasCurrentUser ? 'user-reacted' : ''}"
           on:click={() => sendReaction('⭐️')}
-          disabled={addingReaction}
+          disabled={addingReaction || pendingReactions.has('⭐️')}
+          title="リアクション済み: {starReaction?.hasCurrentUser}, ユーザー: {currentUserPubkey?.slice(0,8)}"
         >
           {#if addingReaction}
             <Icon name="loader" size={14} />
@@ -298,9 +381,10 @@
         <button 
           class="reaction-btn small {reaction.hasCurrentUser ? 'user-reacted' : ''}"
           on:click={() => sendReaction(reaction.content)}
-          disabled={addingReaction}
+          disabled={addingReaction || pendingReactions.has(reaction.content)}
+          title="リアクション済み: {reaction.hasCurrentUser}, ID: {reaction.currentUserReactionId?.slice(0,8)}"
         >
-          <span class="reaction-emoji">{reaction.content}</span>
+          <span class="reaction-emoji">{@html processReactionEmoji(reaction.content, reaction.sampleEvent)}</span>
           {#if reaction.count > 1}
             {reaction.count}
           {/if}
@@ -755,6 +839,17 @@
   .reaction-emoji {
     font-size: 1em;
     line-height: 1;
+  }
+
+  /* リアクション絵文字画像用のスタイル */
+  :global(.reaction-emoji-img) {
+    width: 1.2em !important;
+    height: 1.2em !important;
+    vertical-align: middle !important;
+    display: inline-block !important;
+    object-fit: contain !important;
+    max-width: 1.2em !important;
+    max-height: 1.2em !important;
   }
 
 

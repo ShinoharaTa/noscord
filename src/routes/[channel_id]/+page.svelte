@@ -79,6 +79,7 @@
   let previousChannelId: string | undefined = undefined;
   let componentKey = 0;
   let showMenuButton = false;
+
   let isLoggedIn = false;
   let textareaElement: HTMLTextAreaElement;
   let messagesContainer: HTMLElement; // メッセージコンテナの参照
@@ -336,6 +337,8 @@
     }
   };
 
+
+
   // リプライIDの変更を監視
   $: if (replyId) {
     loadReplyToEvent(replyId);
@@ -509,6 +512,7 @@
   {#key `nostr-app-${channel_id}-${componentKey}`}
     <NostrApp {relays}>
       {#key `${channel_id}-${componentKey}`}
+
       <UniqueEventList
         queryKey={["timeline", "feed", channel_id, componentKey.toString()]}
         filters={[

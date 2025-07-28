@@ -400,6 +400,9 @@ export const react = async (
   event.tags.push(["e", targetEventId]);
   event.tags.push(["p", targetEventAuthor]);
   
+  // カスタム絵文字の場合、emojiタグを追加
+  addCustomEmojiTags(event, content);
+  
   const reaction = finalizeEvent(event, seckeyBytes);
   
   return new Promise<boolean>((resolve, reject) => {
@@ -464,6 +467,8 @@ export const reactWithNip07 = async (
     event.tags.push(["e", targetEventId]);
     event.tags.push(["p", targetEventAuthor]);
     
+    addCustomEmojiTags(event, content);
+    
     const signedEvent = await window.nostr.signEvent(event);
     
     return new Promise<boolean>((resolve, reject) => {
@@ -521,6 +526,8 @@ export const getReactions = async (eventId: string): Promise<Event[]> => {
     return [];
   }
 };
+
+
 
 // リアクション削除（NIP-09）
 export const deleteReaction = async (
@@ -641,6 +648,28 @@ export const deleteReactionWithNip07 = async (
     });
   } catch (error) {
     throw new Error(`NIP-07でのリアクション削除に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+// カスタム絵文字タグを追加する共通関数
+const addCustomEmojiTags = (event: any, content: string) => {
+  const shortcodeMatch = content.match(/^:([a-zA-Z0-9_+-]+):$/);
+  if (shortcodeMatch) {
+    const shortcode = shortcodeMatch[1];
+    
+    // 一般的なカスタム絵文字のマッピング（テスト用）
+    const commonEmojiUrls: Record<string, string> = {
+      'heart': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2764.png',
+      'thumbsup': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f44d.png',
+      'fire': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f525.png',
+      'rocket': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f680.png'
+    };
+    
+    const emojiUrl = commonEmojiUrls[shortcode];
+    if (emojiUrl) {
+      event.tags.push(["emoji", shortcode, emojiUrl]);
+      console.log(`カスタム絵文字リアクション送信: :${shortcode}: -> ${emojiUrl}`);
+    }
   }
 };
 
