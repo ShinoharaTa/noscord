@@ -1,13 +1,10 @@
 <script lang="ts">
-  import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { newThread, newThreadWithNip07, post, postWithNip07 } from "$lib/nostr";
   import { getSecKey, settingsModal, getUseNip07, nip07Available } from "$lib/store";
   import Icon from "$lib/components/icons.svelte";
   import "websocket-polyfill";
-  const channel_id: string = $page.params.channel_id;
-
   let name = "";
   let postContent = "";
   let isSubmitting = false;
@@ -87,83 +84,83 @@
   };
 </script>
 
-<div class="new-channel-container">
-  <div class="new-channel-header">
-    <h1>新しいチャンネルを作成</h1>
-    <p class="subtitle">新しいトピックを始めましょう</p>
+<div class="max-w-[600px] mx-auto py-6 px-4 md:py-10 md:px-6 bg-surface-chat min-h-dvh">
+  <div class="mb-10">
+    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-[var(--primary-text)]">新しいチャンネルを作成</h1>
+    <p class="text-foreground-secondary m-0 text-lg">新しいトピックを始めましょう</p>
   </div>
 
   {#if isChecking}
-    <div class="checking-container">
+    <div class="flex flex-col items-center justify-center py-20 px-5 text-center">
       <div class="loading-spinner"></div>
       <p>認証状態を確認中...</p>
     </div>
   {:else if !isLoggedIn}
-    <div class="login-required">
-              <div class="login-icon">
-          <Icon name="key" size={24} />
-        </div>
-      <h2>ログインが必要です</h2>
-      <p>チャンネルを作成するには、秘密鍵の登録が必要です。</p>
-      <div class="login-actions">
-        <button class="btn btn-primary" on:click={() => settingsModal.set(true)}>
+    <div class="bg-surface-card border border-border rounded-lg py-10 px-8 max-md:p-6 shadow-md">
+      <div class="mb-4 text-accent">
+        <Icon name="key" size={24} />
+      </div>
+      <h2 class="text-2xl max-md:text-xl font-semibold mb-4 text-[var(--primary-text)]">ログインが必要です</h2>
+      <p class="text-lg text-foreground-secondary mb-6 leading-normal">チャンネルを作成するには、秘密鍵の登録が必要です。</p>
+      <div class="flex gap-4 mb-8 max-md:flex-col">
+        <button class="btn-primary flex items-center gap-2 py-3 px-6 border-none rounded-md text-base font-medium cursor-pointer transition-all bg-accent text-white shadow-sm min-w-[140px] max-md:w-full max-md:justify-center" on:click={() => settingsModal.set(true)}>
           キー管理を開く
         </button>
-        <button class="btn btn-secondary" on:click={cancel}>
+        <button class="btn-secondary flex items-center gap-2 py-3 px-6 rounded-md text-base font-medium cursor-pointer transition-all bg-surface-alt text-foreground border border-border min-w-[140px] max-md:w-full max-md:justify-center" on:click={cancel}>
           ホームに戻る
         </button>
       </div>
-      <div class="login-help">
-        <p>
+      <div class="p-5 bg-info-bg border border-info-border rounded-md text-left">
+        <p class="m-0 text-sm text-info-text leading-normal">
           <strong>初回利用の場合:</strong><br>
           キー管理で新しい秘密鍵を生成するか、既存の秘密鍵を登録してください。
         </p>
       </div>
     </div>
   {:else}
-    <div class="new-channel-form">
-      <div class="form-group">
-        <label class="form-label" for="channel-name">
-          チャンネル名 <span class="required">*</span>
+    <div class="bg-surface-card border border-border rounded-lg p-8 max-md:p-6 shadow-md">
+      <div class="mb-6">
+        <label class="block font-semibold text-[var(--primary-text)] mb-2 text-base" for="channel-name">
+          チャンネル名 <span class="text-error">*</span>
         </label>
         <input 
           id="channel-name"
           type="text" 
           bind:value={name} 
           placeholder="例: 雑談、技術議論、ニュース"
-          class="form-input"
+          class="form-input w-full py-3 px-4 border border-border rounded-md bg-surface-input text-foreground text-base leading-snug transition-all font-[inherit] max-w-full"
           maxlength="100"
           disabled={isSubmitting}
         />
-        <small class="form-help">チャンネルの目的が分かりやすい名前をつけましょう</small>
+        <small class="block mt-1 text-sm text-foreground-secondary leading-tight">チャンネルの目的が分かりやすい名前をつけましょう</small>
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="first-message">
-          最初のメッセージ <span class="required">*</span>
+      <div class="mb-6">
+        <label class="block font-semibold text-[var(--primary-text)] mb-2 text-base" for="first-message">
+          最初のメッセージ <span class="text-error">*</span>
         </label>
         <textarea 
           id="first-message"
           bind:value={postContent} 
           placeholder="このチャンネルの目的や、最初のトピックを書いてください..."
-          class="form-textarea"
+          class="form-input w-full py-3 px-4 border border-border rounded-md bg-surface-input text-foreground text-base leading-snug transition-all font-[inherit] max-w-full resize-y min-h-[100px]"
           rows="4"
           maxlength="1000"
           disabled={isSubmitting}
         ></textarea>
-        <small class="form-help">他の人が参加しやすくなるような説明を書いてください</small>
+        <small class="block mt-1 text-sm text-foreground-secondary leading-tight">他の人が参加しやすくなるような説明を書いてください</small>
       </div>
 
-      <div class="form-actions">
+      <div class="flex gap-3 justify-end mt-8 max-md:flex-col">
         <button 
-          class="btn btn-secondary" 
+          class="btn-secondary flex items-center gap-2 py-3 px-6 rounded-md text-base font-medium cursor-pointer transition-all bg-surface-alt text-foreground border border-border max-md:w-full max-md:justify-center" 
           on:click={cancel}
           disabled={isSubmitting}
         >
           キャンセル
         </button>
         <button 
-          class="btn btn-primary" 
+          class="btn-primary flex items-center gap-2 py-3 px-6 border-none rounded-md text-base font-medium cursor-pointer transition-all bg-accent text-white shadow-sm max-md:w-full max-md:justify-center" 
           on:click={submit} 
           disabled={submitDisabled}
         >
@@ -176,8 +173,8 @@
         </button>
       </div>
 
-      <div class="form-notice">
-        <p>
+      <div class="mt-6 p-4 bg-info-bg border border-info-border rounded-md">
+        <p class="m-0 text-sm text-info-text leading-snug">
           <strong>注意:</strong> 新しいチャンネルが一覧に反映されるまで、最大5分程度かかる場合があります。
         </p>
       </div>
@@ -186,204 +183,23 @@
 </div>
 
 <style>
-  .new-channel-container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: var(--space-10) var(--space-6);
-    background: var(--chat-bg);
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
-
-  .new-channel-header {
-    text-align: center;
-    margin-bottom: var(--space-10);
-  }
-
-  .new-channel-header h1 {
-    font-size: var(--font-size-3xl);
-    font-weight: var(--font-weight-bold);
-    margin: 0 0 var(--space-2) 0;
-    color: var(--primary-text);
-  }
-
-  .subtitle {
-    color: var(--secondary-text);
-    margin: 0;
-    font-size: var(--font-size-lg);
-  }
-
-  .new-channel-form {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--space-8);
-    box-shadow: var(--shadow-md);
-  }
-
-  .form-group {
-    margin-bottom: var(--space-6);
-  }
-
-  .form-label {
-    display: block;
-    font-weight: var(--font-weight-semibold);
-    color: var(--primary-text);
-    margin-bottom: var(--space-2);
-    font-size: var(--font-size-base);
-  }
-
-  .required {
-    color: var(--error-color);
-  }
-
-  .form-input, .form-textarea {
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--input-bg);
-    color: var(--text-color);
-    font-size: var(--font-size-base);
-    line-height: 1.4;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    font-family: inherit;
-  }
-
-  .form-input:focus, .form-textarea:focus {
+  /* フォーム要素のフォーカス・無効化スタイル */
+  .form-input:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px var(--primary-color-alpha);
+    outline: none;
   }
 
-  .form-input:disabled, .form-textarea:disabled {
+  .form-input:disabled {
     background: var(--disabled-bg);
     cursor: not-allowed;
   }
 
-  .form-textarea {
-    resize: vertical;
-    min-height: 100px;
-  }
-
-  .form-help {
-    display: block;
-    margin-top: var(--space-1);
-    font-size: var(--font-size-sm);
-    color: var(--secondary-text);
-    line-height: 1.3;
-  }
-
-  .checking-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 80px var(--space-5);
-    text-align: center;
-  }
-
-  .loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-color);
-    border-top: 3px solid var(--primary-color);
-    border-radius: var(--radius-full);
-    animation: spin 1s linear infinite;
-    margin-bottom: var(--space-4);
-  }
-
-  .login-required {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--space-10) var(--space-8);
-    text-align: center;
-    box-shadow: var(--shadow-md);
-  }
-
-  .login-icon {
-    font-size: 4rem;
-    margin-bottom: var(--space-4);
-    color: var(--primary-color);
-  }
-
-  .login-required h2 {
-    font-size: var(--font-size-2xl);
-    font-weight: var(--font-weight-semibold);
-    margin: 0 0 var(--space-4) 0;
-    color: var(--primary-text);
-  }
-
-  .login-required p {
-    font-size: var(--font-size-lg);
-    color: var(--secondary-text);
-    margin: 0 0 var(--space-6) 0;
-    line-height: var(--line-height-normal);
-  }
-
-  .login-actions {
-    display: flex;
-    gap: var(--space-4);
-    justify-content: center;
-    margin-bottom: var(--space-8);
-  }
-
-  .login-actions .btn {
-    min-width: 140px;
-  }
-
-  .login-help {
-    padding: var(--space-5);
-    background: var(--info-bg);
-    border: 1px solid var(--info-border);
-    border-radius: var(--radius-md);
-    text-align: left;
-  }
-
-  .login-help p {
-    margin: 0;
-    font-size: var(--font-size-sm);
-    color: var(--info-text);
-    line-height: var(--line-height-normal);
-  }
-
-  .form-actions {
-    display: flex;
-    gap: var(--space-3);
-    justify-content: flex-end;
-    margin-top: var(--space-8);
-  }
-
-  .btn {
-    padding: var(--space-3) var(--space-6);
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-medium);
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-family: inherit;
-  }
-
-  .btn-primary {
-    background: var(--primary-color);
-    color: white;
-    box-shadow: var(--shadow-sm);
-  }
-
+  /* ボタンのホバー・無効化 */
   .btn-primary:hover:not(:disabled) {
     background: var(--primary-color-hover);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
-  }
-
-  .btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
   }
 
   .btn-secondary:hover:not(:disabled) {
@@ -392,10 +208,22 @@
     transform: translateY(-1px);
   }
 
-  .btn:disabled {
+  .btn-primary:disabled,
+  .btn-secondary:disabled {
     background: var(--disabled-bg);
     cursor: not-allowed;
     transform: none;
+  }
+
+  /* スピナー */
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 9999px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
   }
 
   .spinner {
@@ -403,58 +231,12 @@
     height: 16px;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-top: 2px solid white;
-    border-radius: var(--radius-full);
+    border-radius: 9999px;
     animation: spin 1s linear infinite;
   }
 
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-  }
-
-  .form-notice {
-    margin-top: var(--space-6);
-    padding: var(--space-4);
-    background: var(--info-bg);
-    border: 1px solid var(--info-border);
-    border-radius: var(--radius-md);
-  }
-
-  .form-notice p {
-    margin: 0;
-    font-size: var(--font-size-sm);
-    color: var(--info-text);
-    line-height: 1.4;
-  }
-
-  @media (max-width: 768px) {
-    .new-channel-container {
-      padding: var(--space-6) var(--space-4);
-    }
-
-    .new-channel-header h1 {
-      font-size: var(--font-size-2xl);
-    }
-
-    .new-channel-form, .login-required {
-      padding: var(--space-6);
-    }
-
-    .form-actions, .login-actions {
-      flex-direction: column;
-    }
-
-    .btn {
-      width: 100%;
-      justify-content: center;
-    }
-
-    .login-icon {
-      font-size: 3rem;
-    }
-
-    .login-required h2 {
-      font-size: var(--font-size-xl);
-    }
   }
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/stores";
+  import "../styles/app.css";
   import "../styles/style.scss";
   import Sidebar from "$lib/components/sidebar.svelte";
   import ChatArea from "$lib/components/chat-area.svelte";
@@ -52,7 +53,7 @@
   };
 </script>
 
-<div class="app-layout">
+<div class="flex h-dvh overflow-hidden relative pt-[env(safe-area-inset-top)]">
   <Sidebar bind:isOpen={sidebarOpen} />
   <ChatArea bind:sidebarOpen>
     <slot />
@@ -62,7 +63,7 @@
 <!-- モバイル用オーバーレイ：統一された実装 -->
 {#if sidebarOpen && typeof window !== 'undefined' && window.innerWidth < 768}
   <div
-    class="sidebar-overlay"
+    class="fixed inset-0 bg-black/50 z-[var(--z-sidebar-overlay)] md:hidden"
     role="button"
     aria-label="サイドバーを閉じる"
     tabindex="0"
@@ -73,21 +74,3 @@
 
 <!-- 設定モーダル -->
 <SettingsModal />
-
-<style>
-  .app-layout {
-    display: flex;
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-    position: relative;
-    padding-top: env(safe-area-inset-top);
-  }
-
-  @media (max-width: 767px) {
-    .app-layout {
-      flex-direction: row;
-    }
-  }
-
-</style>

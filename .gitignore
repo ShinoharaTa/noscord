@@ -153,3 +153,6 @@ playwright-report/
 test-results/
 
 # End of https://www.toptal.com/developers/gitignore/api/svelte,node
+
+# Playwright screenshots
+e2e/screenshots/

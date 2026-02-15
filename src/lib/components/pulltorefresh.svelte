@@ -31,14 +31,6 @@
   });
 </script>
 
-<div class="pull-to-refresh">
+<div class="relative overflow-hidden">
   <slot />
 </div>
-
-<style>
-  /* 必要に応じてスタイルを追加 */
-  .pull-to-refresh {
-    position: relative;
-    overflow: hidden;
-  }
-</style>

@@ -14,7 +14,7 @@
     checkRelayConnections,
   } from "$lib/nostr";
   import { finalizeEvent } from "nostr-tools";
-  import { hexToBytes } from "@noble/hashes/utils";
+  import { hexToBytes } from "@noble/hashes/utils.js";
   import {
     getSecKey,
     modal,
@@ -28,7 +28,7 @@
   import "websocket-polyfill";
   
   // リアクティブにchannel_idを取得
-  $: channel_id = $page.params.channel_id;
+  $: channel_id = $page.params.channel_id ?? "";
 
   // 取得したイベントを時系列で並べ替える
   const sorted = (events: Nostr.Event[]) => {
@@ -292,7 +292,7 @@
   };
 
   // NIP-98認証ヘッダーを生成
-  const createNip98AuthHeader = async (url: string, method: string, payload?: Uint8Array) => {
+  const createNip98AuthHeader = async (url: string, method: string, payload?: ArrayBuffer) => {
     const useNip07 = getUseNip07();
     const seckey = getSecKey();
     
@@ -356,9 +356,8 @@
         
         // ファイルデータをUint8Arrayに変換してNIP-98認証用
         const arrayBuffer = await image.arrayBuffer();
-        const fileBytes = new Uint8Array(arrayBuffer);
         
-        const authHeader = await createNip98AuthHeader('https://nostr.build/api/v2/upload/files', 'POST', fileBytes);
+        const authHeader = await createNip98AuthHeader('https://nostr.build/api/v2/upload/files', 'POST', arrayBuffer);
         
         const response = await fetch('https://nostr.build/api/v2/upload/files', {
           method: 'POST',
@@ -713,12 +712,12 @@
         <!-- eventsの長さを監視 -->
         <span class="hidden-debug">{eventsLength = events.length}</span>
 
-      <div slot="loading" class="loading-container">
+      <div slot="loading" class="loading-container flex flex-col items-center justify-center py-[60px] px-5 text-center text-foreground-secondary">
         <div class="loading-spinner"></div>
         <p>メッセージを読み込み中...</p>
       </div>
-      <div slot="error" let:error class="error-container">
-        <p class="error-message">エラー: {error}</p>
+      <div slot="error" let:error class="error-container py-10 px-5 text-center text-error">
+        <p class="text-error font-medium">エラー: {error}</p>
       </div>
       
       <!-- チャンネルヘッダー -->
@@ -985,16 +984,7 @@
     100% { transform: rotate(360deg); }
   }
 
-  .error-container {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--error-color);
-  }
-
-  .error-message {
-    color: var(--error-color);
-    font-weight: 500;
-  }
+  /* error-container と error-message は Tailwind に移行済み */
 
   .channel-header {
     position: sticky;

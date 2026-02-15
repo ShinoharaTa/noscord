@@ -21,33 +21,12 @@
   });
 </script>
 
-<div class="chat-container">
-  <div class="chat-content" class:chat-content-page={isChatPage}>
+<div class="chat-container flex flex-1 flex-col h-dvh bg-surface-chat overflow-hidden">
+  <div
+    class="chat-content flex-1 overflow-y-auto w-full h-full"
+    class:flex={isChatPage}
+    class:flex-col={isChatPage}
+  >
     <slot />
   </div>
-</div>
-
-<style>
-  .chat-container {
-    flex: 1;
-    height: 100vh;
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    background: var(--chat-bg);
-    overflow: hidden;
-  }
-
-  .chat-content {
-    flex: 1;
-    overflow-y: auto;
-    width: 100%;
-    height: 100%;
-  }
-
-  /* チャットページ専用のスタイル */
-  .chat-content.chat-content-page {
-    display: flex;
-    flex-direction: column;
-  }
-</style> 
+</div> 

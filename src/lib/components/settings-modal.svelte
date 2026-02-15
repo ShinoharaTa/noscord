@@ -14,7 +14,7 @@
     useNip07
   } from '$lib/store';
   import { generateSecretKey } from 'nostr-tools';
-  import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+  import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
   import { nip19 } from 'nostr-tools';
   import Icon from './icons.svelte';
 
@@ -23,7 +23,8 @@
   let nip07PublicKey = '';
   let loadingNip07 = false;
 
-  onMount(async () => {
+  onMount(() => {
+    const initialize = async () => {
     // 既存の秘密鍵を読み込み（Hex形式をnsec1形式に変換）
     const existingKey = getSecKey();
     if (existingKey) {
@@ -43,6 +44,8 @@
     if ($nip07Available && $useNip07) {
       await loadNip07PublicKey();
     }
+    };
+    void initialize();
 
     // Escキーでモーダルを閉じる
     const handleKeydown = (event: KeyboardEvent) => {
@@ -174,33 +177,33 @@
     on:keydown={handleOverlayKeydown}
   ></div>
   <div class="settings-modal">
-    <div class="settings-modal-header">
-      <h2>設定</h2>
-      <button class="close-button" on:click={closeModal}>
+    <div class="flex justify-between items-center py-5 px-6 border-b border-border shrink-0">
+      <h2 class="m-0 text-xl font-semibold text-foreground">設定</h2>
+      <button class="bg-transparent border-none text-foreground-secondary cursor-pointer p-1 rounded-sm transition-colors flex items-center justify-center hover:bg-surface-hover" on:click={closeModal}>
         <Icon name="x" size={20} />
       </button>
     </div>
-    <div class="settings-modal-content">
-      <div class="settings-content">
+    <div class="p-0 overflow-y-auto flex-1 max-h-[60vh]">
+      <div class="p-6">
         <!-- キー管理セクション -->
-        <div class="settings-section">
-          <div class="settings-section-header">
+        <div class="settings-section mb-8 pb-8 border-b border-border">
+          <div class="flex items-center gap-3 mb-3">
             <Icon name="key" size={20} />
-            <h3>秘密鍵の管理</h3>
+            <h3 class="m-0 text-xl font-semibold text-foreground">秘密鍵の管理</h3>
           </div>
-          <p class="section-description">Nostrプロトコルで使用する秘密鍵の設定と管理を行います。</p>
+          <p class="mb-6 text-foreground-secondary leading-normal">Nostrプロトコルで使用する秘密鍵の設定と管理を行います。</p>
           
-          <div class="settings-form">
-            <div class="form-group">
-              <label for="secret-key">秘密鍵 (nsec1形式)</label>
-              <div class="password-input-container">
+          <div class="mb-6">
+            <div class="mb-5">
+              <label for="secret-key" class="block mb-2 font-medium text-foreground text-sm">秘密鍵 (nsec1形式)</label>
+              <div class="relative flex items-center">
                 {#if showSecretKey}
                   <input
                     id="secret-key"
                     type="text"
                     bind:value={secretKey}
                     placeholder="nsec1... または64文字のHex形式"
-                    class="form-input password-input"
+                    class="form-input w-full py-3 px-4 pr-12 border border-border rounded-md bg-surface-input text-foreground text-sm font-mono transition-colors h-11 max-w-full"
                   />
                 {:else}
                   <input
@@ -208,32 +211,32 @@
                     type="password"
                     bind:value={secretKey}
                     placeholder="nsec1... または64文字のHex形式"
-                    class="form-input password-input"
+                    class="form-input w-full py-3 px-4 pr-12 border border-border rounded-md bg-surface-input text-foreground text-sm font-mono transition-colors h-11 max-w-full"
                   />
                 {/if}
                 <button
                   type="button"
-                  class="password-toggle"
+                  class="password-toggle absolute right-3 bg-transparent border-none text-foreground-secondary cursor-pointer p-1 rounded-sm transition-all flex items-center justify-center hover:bg-surface-hover hover:text-foreground"
                   on:click={toggleSecretKeyVisibility}
                   title={showSecretKey ? '秘密鍵を非表示' : '秘密鍵を表示'}
                 >
                   <Icon name={showSecretKey ? 'eye-off' : 'eye'} size={16} />
                 </button>
               </div>
-              <p class="form-help">nsec1形式（推奨）または64文字のHex形式で入力してください。</p>
+              <p class="mt-2 text-xs text-foreground-secondary">nsec1形式（推奨）または64文字のHex形式で入力してください。</p>
             </div>
             
-            <div class="form-actions">
-              <button class="btn-primary" on:click={saveSecretKey}>
+            <div class="flex gap-3 flex-wrap">
+              <button class="flex items-center gap-2 py-2.5 px-4 border-none rounded-md text-sm cursor-pointer transition-all font-medium bg-accent text-white hover:bg-accent-hover" on:click={saveSecretKey}>
                 <Icon name="key" size={16} />
                 <span>秘密鍵を保存</span>
               </button>
-              <button class="btn-secondary" on:click={generateNewKey}>
+              <button class="flex items-center gap-2 py-2.5 px-4 rounded-md text-sm cursor-pointer transition-all font-medium bg-surface-alt text-foreground border border-border hover:bg-surface-hover" on:click={generateNewKey}>
                 <Icon name="refresh" size={16} />
                 <span>新しい鍵を生成</span>
               </button>
               {#if secretKey}
-                <button class="btn-danger" on:click={deleteSecretKey}>
+                <button class="flex items-center gap-2 py-2.5 px-4 border-none rounded-md text-sm cursor-pointer transition-all font-medium bg-danger text-white hover:bg-danger-hover" on:click={deleteSecretKey}>
                   <Icon name="trash" size={16} />
                   <span>秘密鍵を削除</span>
                 </button>
@@ -241,7 +244,7 @@
             </div>
           </div>
           
-          <div class="warning-box">
+          <div class="flex gap-3 p-4 bg-warning-bg border border-warning-border rounded-md text-warning-text text-sm leading-snug">
             <Icon name="info" size={16} />
             <div>
               <strong>重要:</strong> 秘密鍵は安全に保管してください。この鍵を紛失すると、アカウントにアクセスできなくなります。
@@ -250,28 +253,28 @@
         </div>
 
         <!-- NIP-07 ブラウザ拡張機能セクション -->
-        <div class="settings-section">
-          <div class="settings-section-header">
+        <div class="settings-section mb-8 pb-8 border-b border-border">
+          <div class="flex items-center gap-3 mb-3">
             <Icon name="globe" size={20} />
-            <h3>ブラウザ拡張機能 (NIP-07)</h3>
+            <h3 class="m-0 text-xl font-semibold text-foreground">ブラウザ拡張機能 (NIP-07)</h3>
           </div>
-          <p class="section-description">nos2x等のブラウザ拡張機能を使用して安全に署名を行うことができます。</p>
+          <p class="mb-6 text-foreground-secondary leading-normal">nos2x等のブラウザ拡張機能を使用して安全に署名を行うことができます。</p>
           
-          <div class="nip07-status">
+          <div class="mb-4">
             {#if $nip07Available}
-              <div class="status-item status-available">
+              <div class="flex items-center gap-2 py-2 px-3 rounded-md text-sm mb-2 bg-success-bg text-success-text border border-success-border">
                 <Icon name="check-circle" size={16} />
                 <span>ブラウザ拡張機能が利用可能です</span>
               </div>
             {:else}
-              <div class="status-item status-unavailable">
+              <div class="flex items-center gap-2 py-2 px-3 rounded-md text-sm mb-2 bg-warning-bg text-warning-text border border-warning-border">
                 <Icon name="x-circle" size={16} />
                 <span>ブラウザ拡張機能が見つかりません</span>
               </div>
             {/if}
             
             {#if $useNip07}
-              <div class="status-item status-connected">
+              <div class="flex items-center gap-2 py-2 px-3 rounded-md text-sm mb-2 bg-info-bg text-info-text border border-info-border">
                 <Icon name="link" size={16} />
                 <span>ブラウザ拡張機能を使用中</span>
               </div>
@@ -279,31 +282,31 @@
           </div>
 
           {#if $nip07Available}
-            <div class="nip07-section">
+            <div class="mt-4">
               {#if $useNip07}
-                <div class="form-group">
-                  <label for="nip07-public-key">公開鍵</label>
-                  <div class="public-key-display">
+                <div class="mb-5">
+                  <label for="nip07-public-key" class="block mb-2 font-medium text-foreground text-sm">公開鍵</label>
+                  <div>
                     <input
                       id="nip07-public-key"
                       type="text"
                       value={nip07PublicKey || $nip07PubKey || '読み込み中...'}
                       readonly
-                      class="form-input"
+                      class="form-input w-full py-3 px-4 border border-border rounded-md bg-surface-input text-foreground text-sm font-mono transition-colors h-11 max-w-full"
                     />
                   </div>
                 </div>
                 
-                <div class="form-actions">
-                  <button class="btn-secondary" on:click={disconnectNip07}>
+                <div class="flex gap-3 flex-wrap">
+                  <button class="flex items-center gap-2 py-2.5 px-4 rounded-md text-sm cursor-pointer transition-all font-medium bg-surface-alt text-foreground border border-border hover:bg-surface-hover" on:click={disconnectNip07}>
                     <Icon name="unlink" size={16} />
                     <span>拡張機能との接続を解除</span>
                   </button>
                 </div>
               {:else}
-                <div class="form-actions">
+                <div class="flex gap-3 flex-wrap">
                   <button 
-                    class="btn-primary" 
+                    class="flex items-center gap-2 py-2.5 px-4 border-none rounded-md text-sm cursor-pointer transition-all font-medium bg-accent text-white hover:bg-accent-hover" 
                     on:click={connectNip07}
                     disabled={loadingNip07}
                   >
@@ -319,7 +322,7 @@
               {/if}
             </div>
           {:else}
-            <div class="info-box">
+            <div class="flex gap-3 p-3 bg-info-bg border border-info-border rounded-md text-sm leading-snug text-info-text">
               <Icon name="info" size={16} />
               <div>
                 <strong>推奨:</strong> nos2x等のNIP-07対応ブラウザ拡張機能をインストールすると、より安全に署名を行うことができます。
@@ -330,49 +333,49 @@
 
         <!-- アプリについてセクション -->
         <div class="settings-section">
-          <div class="settings-section-header">
+          <div class="flex items-center gap-3 mb-3">
             <Icon name="info" size={20} />
-            <h3>Noscord について</h3>
+            <h3 class="m-0 text-xl font-semibold text-foreground">Noscord について</h3>
           </div>
-          <p class="section-description">Nostrプロトコルを使用したパブリックチャットクライアントです。</p>
+          <p class="mb-6 text-foreground-secondary leading-normal">Nostrプロトコルを使用したパブリックチャットクライアントです。</p>
           
-          <div class="about-section">
-            <h4>アプリケーション情報</h4>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">バージョン</span>
-                <span class="info-value">1.0.0</span>
+          <div class="mb-8">
+            <h4 class="mb-4 text-lg font-semibold text-foreground">アプリケーション情報</h4>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="flex justify-between py-3 px-4 bg-surface-alt rounded-md">
+                <span class="font-medium text-foreground-secondary">バージョン</span>
+                <span class="font-semibold text-foreground">1.0.0</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">プロトコル</span>
-                <span class="info-value">Nostr</span>
+              <div class="flex justify-between py-3 px-4 bg-surface-alt rounded-md">
+                <span class="font-medium text-foreground-secondary">プロトコル</span>
+                <span class="font-semibold text-foreground">Nostr</span>
               </div>
-              <div class="info-item">
-                <span class="info-label">ライセンス</span>
-                <span class="info-value">MIT License</span>
+              <div class="flex justify-between py-3 px-4 bg-surface-alt rounded-md">
+                <span class="font-medium text-foreground-secondary">ライセンス</span>
+                <span class="font-semibold text-foreground">MIT License</span>
               </div>
             </div>
           </div>
           
-          <div class="about-section">
-            <h4>機能</h4>
-            <ul class="feature-list">
-              <li>リアルタイムチャット</li>
-              <li>チャンネル作成・参加</li>
-              <li>秘密鍵による認証</li>
-              <li>レスポンシブデザイン</li>
-              <li>ダークモード対応</li>
+          <div class="mb-8">
+            <h4 class="mb-4 text-lg font-semibold text-foreground">機能</h4>
+            <ul class="m-0 pl-5 text-foreground">
+              <li class="mb-2 leading-snug">リアルタイムチャット</li>
+              <li class="mb-2 leading-snug">チャンネル作成・参加</li>
+              <li class="mb-2 leading-snug">秘密鍵による認証</li>
+              <li class="mb-2 leading-snug">レスポンシブデザイン</li>
+              <li class="mb-2 leading-snug">ダークモード対応</li>
             </ul>
           </div>
           
-          <div class="about-section">
-            <h4>開発者情報</h4>
+          <div>
+            <h4 class="mb-4 text-lg font-semibold text-foreground">開発者情報</h4>
             <p>このアプリケーションはオープンソースプロジェクトです。</p>
-            <div class="link-group">
-              <a href="https://github.com" class="external-link" target="_blank" rel="noopener">
+            <div class="flex gap-4 flex-wrap">
+              <a href="https://github.com" class="text-accent no-underline font-medium transition-colors hover:text-accent-hover hover:underline" target="_blank" rel="noopener">
                 GitHub
               </a>
-              <a href="https://nostr.com" class="external-link" target="_blank" rel="noopener">
+              <a href="https://nostr.com" class="text-accent no-underline font-medium transition-colors hover:text-accent-hover hover:underline" target="_blank" rel="noopener">
                 Nostr公式サイト
               </a>
             </div>
@@ -384,6 +387,7 @@
 {/if}
 
 <style>
+  /* モーダル配置（Tailwind では表現が複雑） */
   .settings-overlay {
     position: fixed;
     top: 0;
@@ -413,344 +417,21 @@
     border: var(--border);
   }
 
-  .settings-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-5) var(--space-6);
-    border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-  }
-
-  .settings-modal-header h2 {
-    margin: 0;
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-color);
-  }
-
-  .close-button {
-    background: none;
-    border: none;
-    color: var(--secondary-text);
-    cursor: pointer;
-    padding: var(--space-1);
-    border-radius: var(--radius-sm);
-    transition: background-color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .close-button:hover {
-    background: var(--hover-bg);
-  }
-
-  .settings-modal-content {
-    padding: 0;
-    overflow-y: auto;
-    flex: 1;
-    max-height: 60vh;
-  }
-
-  .settings-content {
-    padding: var(--space-6);
-  }
-
-  .settings-section {
-    margin-bottom: var(--space-8);
-    padding-bottom: var(--space-8);
-    border-bottom: 1px solid var(--border-color);
-  }
-
+  /* last-child でボーダーを消す */
   .settings-section:last-child {
     border-bottom: none;
     margin-bottom: 0;
     padding-bottom: 0;
   }
 
-  .settings-section-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-3);
-  }
-
-  .settings-section-header h3 {
-    margin: 0;
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-color);
-  }
-
-  .section-description {
-    margin: 0 0 var(--space-6) 0;
-    color: var(--secondary-text);
-    line-height: var(--line-height-normal);
-  }
-
-  .settings-form {
-    margin-bottom: var(--space-6);
-  }
-
-  .form-group {
-    margin-bottom: var(--space-5);
-  }
-
-  .form-group label {
-    display: block;
-    margin-bottom: var(--space-2);
-    font-weight: var(--font-weight-medium);
-    color: var(--text-color);
-    font-size: var(--font-size-sm);
-  }
-
-  .form-input {
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--input-bg);
-    color: var(--text-color);
-    font-size: var(--font-size-sm);
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    transition: border-color 0.2s;
-    height: 44px;
-  }
-
+  /* フォーカス状態 */
   .form-input:focus {
     outline: none;
     border-color: var(--primary-color);
   }
 
-  .form-help {
-    margin: var(--space-2) 0 0 0;
-    font-size: var(--font-size-xs);
-    color: var(--secondary-text);
-  }
-
-  .password-input-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .password-input {
-    padding-right: 48px;
-  }
-
-  .password-toggle {
-    position: absolute;
-    right: var(--space-3);
-    background: none;
-    border: none;
-    color: var(--secondary-text);
-    cursor: pointer;
-    padding: var(--space-1);
-    border-radius: var(--radius-sm);
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .password-toggle:hover {
-    background: var(--hover-bg);
-    color: var(--text-color);
-  }
-
   .password-toggle:focus {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
-  }
-
-  .form-actions {
-    display: flex;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-  }
-
-  .btn-primary, .btn-secondary {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 10px var(--space-4);
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: var(--font-weight-medium);
-  }
-
-  .btn-primary {
-    background: var(--primary-color);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: var(--primary-color-hover);
-  }
-
-  .btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-  }
-
-  .btn-secondary:hover {
-    background: var(--hover-bg);
-  }
-
-  .btn-danger {
-    background: var(--danger-color);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    padding: 10px var(--space-4);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: var(--font-weight-medium);
-  }
-
-  .btn-danger:hover {
-    background: var(--danger-color-hover);
-  }
-
-  /* NIP-07 styles */
-  .nip07-status {
-    margin-bottom: var(--space-4);
-  }
-
-  .status-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
-    margin-bottom: var(--space-2);
-  }
-
-  .status-available {
-    background: var(--success-bg);
-    color: var(--success-text);
-    border: 1px solid var(--success-border);
-  }
-
-  .status-unavailable {
-    background: var(--warning-bg);
-    color: var(--warning-text);
-    border: 1px solid var(--warning-border);
-  }
-
-  .status-connected {
-    background: var(--info-bg);
-    color: var(--info-text);
-    border: 1px solid var(--info-border);
-  }
-
-  .nip07-section {
-    margin-top: var(--space-4);
-  }
-
-  .public-key-display input {
-    font-family: monospace;
-    font-size: var(--font-size-sm);
-    background: var(--input-bg);
-    border: 1px solid var(--border-color);
-  }
-
-  .info-box {
-    display: flex;
-    gap: var(--space-3);
-    padding: var(--space-3);
-    background: var(--info-bg);
-    border: 1px solid var(--info-border);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
-    line-height: 1.4;
-    color: var(--info-text);
-  }
-
-  .warning-box {
-    display: flex;
-    gap: var(--space-3);
-    padding: var(--space-4);
-    background: var(--warning-bg);
-    border: 1px solid var(--warning-border);
-    border-radius: var(--radius-md);
-    color: var(--warning-text);
-    font-size: var(--font-size-sm);
-    line-height: 1.4;
-  }
-
-  .about-section {
-    margin-bottom: var(--space-8);
-  }
-
-  .about-section:last-child {
-    margin-bottom: 0;
-  }
-
-  .about-section h4 {
-    margin: 0 0 var(--space-4) 0;
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-color);
-  }
-
-  .info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-4);
-    margin-bottom: var(--space-4);
-  }
-
-  .info-item {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--space-3) var(--space-4);
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-  }
-
-  .info-label {
-    font-weight: var(--font-weight-medium);
-    color: var(--secondary-text);
-  }
-
-  .info-value {
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-color);
-  }
-
-  .feature-list {
-    margin: 0;
-    padding-left: var(--space-5);
-    color: var(--text-color);
-  }
-
-  .feature-list li {
-    margin-bottom: var(--space-2);
-    line-height: 1.4;
-  }
-
-  .link-group {
-    display: flex;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-  }
-
-  .external-link {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: var(--font-weight-medium);
-    transition: color 0.2s;
-  }
-
-  .external-link:hover {
-    color: var(--primary-color-hover);
-    text-decoration: underline;
   }
 </style> 

@@ -121,6 +121,16 @@ Noscord は **Nostr プロトコルを使ったパブリックなチャンネル
 - **検証内容**: ページ表示、サイドバー・ナビゲーション、レイアウト崩れ（オーバーフロー）、モバイルビューポート、ボタン操作
 - **実行環境**: Chromium（デスクトップ）、Mobile Chrome（Pixel 5）
 
+## Tailwind CSS
+
+スタイリングに **Tailwind CSS v4** を導入しています。
+
+- **設定**: `src/styles/app.css` に `@import "tailwindcss"` と `@theme` でデザイントークンをマッピング
+- **Vite プラグイン**: `@tailwindcss/vite` を `vite.config.ts` で使用
+- **既存デザインシステムとの共存**: `:root` の CSS 変数（ライト/ダークモード）は `style.scss` で維持し、`@theme` から `var()` で参照
+- **グローバルスタイル**: `style.scss` の要素リセット（`button`, `input` 等）は `@layer base` に配置し、Tailwind ユーティリティが上書き可能
+- **テーマトークン**: `accent`(緑), `foreground`(テキスト), `surface`(背景), `border` 等の意味的な名前で定義
+
 ## 開発者向けメモ
 
 - 開発スクリプトは `package.json` の `scripts` を参照（`dev`, `build`, `check`, `lint`, `test:e2e`）。

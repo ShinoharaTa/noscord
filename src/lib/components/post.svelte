@@ -80,7 +80,7 @@
       if (seckey) {
         // 秘密鍵から公開鍵を生成
         const { getPublicKey } = await import('nostr-tools');
-        const { hexToBytes } = await import('@noble/hashes/utils');
+        const { hexToBytes } = await import('@noble/hashes/utils.js');
         currentUserPubkey = getPublicKey(hexToBytes(seckey));
       }
     }
@@ -284,9 +284,12 @@
   }
   
   // コンポーネント初期化時の処理
-  onMount(async () => {
-    await updateCurrentUserPubkey();
-    await loadReactions();
+  onMount(() => {
+    const initialize = async () => {
+      await updateCurrentUserPubkey();
+      await loadReactions();
+    };
+    void initialize();
     
     // ページがフォーカスを取り戻した時にリアクションを再読み込み
     const handleFocus = () => {
@@ -324,21 +327,21 @@
   });
 </script>
 
-<article class="post">
-  <div class="post-header">
+<article class="post py-4 border-b border-border break-words last:border-b-0">
+  <div class="post-header mb-2 md:flex md:items-center md:gap-3 md:min-w-0">
     <h3
-      class="post-author"
+      class="post-author text-accent text-base font-semibold m-0 pl-2 whitespace-nowrap overflow-hidden text-ellipsis md:flex-1 md:min-w-0"
       style="border-left: 4px solid #{event.pubkey.slice(0, 6)};"
       title="{getDisplayName()} (ID: {event.pubkey.slice(0, 10)})"
     >
       {getDisplayName()}
     </h3>
-    <div class="post-meta">
-      <aside class="post-id" title="投稿ID: {event.id}">
+    <div class="post-meta flex items-center gap-2 max-md:mt-1 max-md:pl-2 md:gap-3 md:shrink-0">
+      <aside class="text-xs text-foreground-muted whitespace-nowrap" title="投稿ID: {event.id}">
         ID: {event.id.slice(0, 10)}
       </aside>
       <time 
-        class="post-time" 
+        class="text-sm text-foreground-muted whitespace-nowrap" 
         data-time={parseTimeOnly(event.created_at)}
         title={parseCreated(event.created_at)}
       >
@@ -356,7 +359,7 @@
     <span class="reply-text">{`>>${reply.slice(0, 10)}`}</span>
   {/if}
   
-  <div class="post-content">
+  <div class="post-content my-2 [overflow-wrap:anywhere] break-words">
     <p>{@html processedText}</p>
     {#each parsed.other_urls as url}
       <p>
@@ -382,7 +385,7 @@
   </div>
   
   {#if action}
-    <div class="post-actions">
+    <div class="post-actions mt-3 flex gap-2">
       <button class="reply-btn small" on:click={onClickReply(event.id)}>
         <Icon name="reply" size={16} />
       </button>
@@ -487,90 +490,7 @@
 {/if}
 
 <style>
-  /* 投稿コンテナ：レスポンシブ対応 */
-  .post {
-    padding: 16px 0;
-    border-bottom: 1px solid var(--border-color);
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .post:last-child {
-    border-bottom: none;
-  }
-
-  /* ヘッダー：レスポンシブ対応 */
-  .post-header {
-    margin-bottom: 8px;
-  }
-
-  /* デスクトップ表示：横並び */
-  @media (min-width: 768px) {
-    .post-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
-
-    .post-author {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .post-meta {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-  }
-
-  /* モバイル表示：縦並び */
-  @media (max-width: 767px) {
-    .post-header {
-      display: block;
-    }
-
-    .post-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 4px;
-      padding-left: 8px;
-    }
-  }
-
-  .post-author {
-    color: var(--primary-color);
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0;
-    padding-left: 8px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .post-time {
-    font-size: 0.85rem;
-    color: var(--muted-text);
-    white-space: nowrap;
-  }
-
-  .post-id {
-    font-size: 0.8rem;
-    color: var(--muted-text);
-    white-space: nowrap;
-  }
-
-  /* コンテンツエリア */
-  .post-content {
-    margin: 8px 0;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
+  /* コンテンツ内の段落 */
   .post-content p {
     word-wrap: break-word;
     overflow-wrap: anywhere;
@@ -710,13 +630,6 @@
   .image-item:hover img {
     border-color: var(--primary-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  /* アクション */
-  .post-actions {
-    margin-top: 12px;
-    display: flex;
-    gap: 8px;
   }
 
   .reply-btn {

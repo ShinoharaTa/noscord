@@ -6,7 +6,7 @@ import {
   SimplePool,
   getPublicKey,
 } from "nostr-tools";
-import { hexToBytes } from '@noble/hashes/utils';
+import { hexToBytes } from '@noble/hashes/utils.js';
 import type { EventTemplate, UnsignedEvent, Event } from "nostr-tools";
 import { addDays, startOfDay, format } from "date-fns";
 const pool = new SimplePool();

@@ -60,7 +60,7 @@
   />
 {:else}
   <!-- フォールバック用の汎用アイコン -->
-  <div class={`icon fallback ${className}`} style="width: {size}px; height: {size}px;">
+  <div class={`icon flex items-center justify-center bg-foreground-muted text-surface rounded-sm text-xs font-bold ${className}`} style="width: {size}px; height: {size}px;">
     ?
   </div>
 {/if}
@@ -70,16 +70,5 @@
     display: inline-block;
     vertical-align: middle;
     flex-shrink: 0;
-  }
-
-  .fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--muted-text);
-    color: var(--bg-primary);
-    border-radius: 2px;
-    font-size: 12px;
-    font-weight: bold;
   }
 </style> 
