@@ -21,10 +21,11 @@
     settingsModal,
     getUseNip07,
     nip07Available,
+    checkNip07Availability,
   } from "$lib/store";
   import type { Nostr } from "nosvelte";
   import { Metadata, NostrApp, UniqueEventList } from "nosvelte";
-  import { writable } from "svelte/store";
+  import { get, writable } from "svelte/store";
   import "websocket-polyfill";
   
   // リアクティブにchannel_idを取得
@@ -180,11 +181,12 @@
     channelName = "";
   };
 
-  // ログイン状態をチェックする関数
+  // ログイン状態をチェックする関数（NIP-07 の最新状態を再検出してから判定）
   const checkLoginStatus = () => {
+    checkNip07Availability();
     const seckey = getSecKey();
     const useNip07 = getUseNip07();
-    isLoggedIn = !!seckey || (useNip07 && $nip07Available);
+    isLoggedIn = !!seckey || (useNip07 && get(nip07Available));
   };
 
   // DOM監視を開始

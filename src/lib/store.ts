@@ -42,6 +42,19 @@ function initializeStores() {
     getLocalStorage();
     loadNip07Preference();
     checkNip07Availability();
+
+    // ブラウザ拡張は document_idle 等で注入されることが多く、初回チェックで検出できない場合がある
+    // 遅延再チェックで拡張の注入を待つ
+    setTimeout(() => checkNip07Availability(), 500);
+    setTimeout(() => checkNip07Availability(), 1500);
+
+    // タブにフォーカスが戻った時に再チェック（拡張を有効化した場合など）
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkNip07Availability();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
   }
 }
 
@@ -86,10 +99,14 @@ export function getSecKey(): string | null {
   return get(seckey);
 }
 
-// NIP-07関連の関数
+// NIP-07関連の関数（getPublicKey と signEvent の両方が必須）
 export function checkNip07Availability(): boolean {
   if (typeof window === 'undefined') return false;
-  const available = !!(window.nostr && typeof window.nostr.signEvent === 'function');
+  const available = !!(
+    window.nostr &&
+    typeof window.nostr.getPublicKey === 'function' &&
+    typeof window.nostr.signEvent === 'function'
+  );
   nip07Available.set(available);
   return available;
 }

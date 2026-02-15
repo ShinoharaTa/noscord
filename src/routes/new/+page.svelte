@@ -2,22 +2,22 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { newThread, newThreadWithNip07, post, postWithNip07 } from "$lib/nostr";
-  import { getSecKey, settingsModal, getUseNip07, nip07Available } from "$lib/store";
+  import { getSecKey, settingsModal, getUseNip07, nip07Available, checkNip07Availability } from "$lib/store";
   import Icon from "$lib/components/icons.svelte";
   import "websocket-polyfill";
   let name = "";
   let postContent = "";
   let isSubmitting = false;
-  let isLoggedIn = false;
   let isChecking = true;
   
   $: submitDisabled = !name.trim() || !postContent.trim() || isSubmitting;
 
-  // ログイン状態をチェック
+  // ログイン状態をリアクティブに判定（nip07Available が遅延検出で更新されても追従）
+  $: isLoggedIn = !!getSecKey() || (getUseNip07() && $nip07Available);
+
+  // 初回マウント時に NIP-07 を再検出して isChecking を解除
   onMount(() => {
-    const seckey = getSecKey();
-    const useNip07 = getUseNip07();
-    isLoggedIn = !!seckey || (useNip07 && $nip07Available);
+    checkNip07Availability();
     isChecking = false;
   });
 
