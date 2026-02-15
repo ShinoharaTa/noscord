@@ -148,4 +148,8 @@ dist
 .svelte-kit/
 package
 
+# Playwright
+playwright-report/
+test-results/
+
 # End of https://www.toptal.com/developers/gitignore/api/svelte,node
