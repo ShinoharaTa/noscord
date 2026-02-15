@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { modal } from "$lib/store";
   import { onDestroy, onMount } from "svelte";
 
@@ -7,6 +7,14 @@
   const handleClose = () => {
     isOpen = false;
     modal.set(false); // モーダルを閉じるときにstoreをクリア
+  };
+
+  const handleOverlayKeydown = (event: KeyboardEvent) => {
+    // Enter / Space で閉じる（A11y）
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleClose();
+    }
   };
 
   $: {
@@ -32,7 +40,14 @@
 </script>
 
 {#if isOpen}
-  <div class="overlay" on:click={handleClose}></div>
+  <div
+    class="overlay"
+    role="button"
+    aria-label="モーダルを閉じる"
+    tabindex="0"
+    on:click={handleClose}
+    on:keydown={handleOverlayKeydown}
+  ></div>
   <div class="modal">
     <div class="header">
       <slot name="header"></slot>

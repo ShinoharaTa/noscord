@@ -89,7 +89,11 @@
         {#if threads.length > 0}
           <div class="channel-grid">
             {#each threads.slice(0, 6) as thread}
-              <div class="channel-card" on:click={() => goto(`/${thread.id}`)}>
+              <button
+                type="button"
+                class="channel-card"
+                on:click={() => goto(`/${thread.id}`)}
+              >
                 <div class="channel-header">
                   <h4>{thread.name !== "" ? thread.name : "無題のチャンネル"}</h4>
                 </div>
@@ -111,7 +115,7 @@
                   <Author hex={thread.author} />
                   <span class="last-update">{parseCreated(thread.latest_update)}</span>
                 </div>
-              </div>
+              </button>
             {/each}
           </div>
         {:else}
@@ -180,12 +184,6 @@
     font-weight: 700;
     margin: 0 0 4px 0;
     color: var(--text-color);
-  }
-
-  .subtitle {
-    color: var(--secondary-text);
-    margin: 0;
-    font-size: 0.9rem;
   }
 
   .home-content {

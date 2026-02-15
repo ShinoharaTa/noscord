@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import "../styles/style.scss";
@@ -42,6 +42,14 @@
       sidebarOpen = false;
     }
   };
+
+  const handleOverlayKeydown = (event: KeyboardEvent) => {
+    // Enter / Space で閉じる（A11y）
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      closeSidebar();
+    }
+  };
 </script>
 
 <div class="app-layout">
@@ -53,7 +61,14 @@
 
 <!-- モバイル用オーバーレイ：統一された実装 -->
 {#if sidebarOpen && typeof window !== 'undefined' && window.innerWidth < 768}
-  <div class="sidebar-overlay" on:click={closeSidebar}></div>
+  <div
+    class="sidebar-overlay"
+    role="button"
+    aria-label="サイドバーを閉じる"
+    tabindex="0"
+    on:click={closeSidebar}
+    on:keydown={handleOverlayKeydown}
+  ></div>
 {/if}
 
 <!-- 設定モーダル -->
@@ -63,6 +78,7 @@
   .app-layout {
     display: flex;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     position: relative;
     padding-top: env(safe-area-inset-top);
@@ -74,25 +90,4 @@
     }
   }
 
-  .mobile-close-btn {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 1001;
-    background: var(--sidebar-bg, #1a1d21);
-    border: 1px solid var(--border-color, #333);
-    color: var(--sidebar-text, #fff);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  .mobile-close-btn:hover {
-    background: var(--hover-bg, #2a2d31);
-  }
 </style>

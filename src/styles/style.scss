@@ -25,11 +25,27 @@
   --border-color: #e3e5e8;
   --border: 1px solid #e3e5e8;
   
-  /* 状態カラー */
+  /* 状態カラー（ベース） */
   --success-color: #059669;
   --error-color: #dc3545;
   --warning-color: #ffc107;
   --info-color: #0dcaf0;
+  --danger-color: #dc3545;
+  --danger-color-hover: #c82333;
+  
+  /* ステータス用途トークン（bg/text/border） */
+  --success-bg: #d4edda;
+  --success-text: #155724;
+  --success-border: #c3e6cb;
+  --warning-bg: #fff3cd;
+  --warning-text: #856404;
+  --warning-border: #ffeaa7;
+  --info-bg: #e3f2fd;
+  --info-text: #1565c0;
+  --info-border: #bbdefb;
+  --danger-bg: #f8d7da;
+  --danger-text: #721c24;
+  --danger-border: #f5c6cb;
   
   /* 特殊用途 */
   --disabled-bg: #adb5bd;
@@ -37,17 +53,36 @@
   --placeholder-color: #adb5bd;
   --reply-bg: #f8f9fa;
   --login-prompt-bg: #f8f9fa;
-  --info-bg: #e3f2fd;
-  --info-border: #bbdefb;
-  --info-text: #1565c0;
-  --warning-bg: #fff3cd;
-  --warning-border: #ffeaa7;
-  --warning-text: #856404;
+  --modal-bg: #ffffff;
   
   /* サイドバー専用 */
   --sidebar-text: #333333;
   --sidebar-muted: #6c757d;
   --sidebar-width: 300px;
+  
+  /* === スケールトークン === */
+  
+  /* 角丸 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  
+  /* 影 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+  
+  /* スペーシング */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
   
   /* フォント */
   --font-family: "Noto Sans JP", "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -75,9 +110,18 @@
   --mobile-breakpoint: 768px;
   --tablet-breakpoint: 1024px;
   
-  /* 旧変数（後方互換性） */
-  --background: #ffffff;
-  --text: #1a1d21;
+  /* Z-index レイヤー（下から上） */
+  --z-sidebar: 100;
+  --z-sidebar-overlay: 150;
+  --z-modal-overlay: 300;
+  --z-modal: 301;
+  --z-settings-overlay: 400;
+  --z-settings-modal: 401;
+  --z-upload-overlay: 500;
+  
+  /* 旧変数（後方互換: 新トークンの alias） */
+  --background: var(--bg-primary);
+  --text: var(--text-color);
   --pathColor: invert(0%);
 }
 
@@ -114,6 +158,22 @@
     --error-color: #f04747;
     --warning-color: #faa61a;
     --info-color: #00aff4;
+    --danger-color: #f04747;
+    --danger-color-hover: #d83c3c;
+    
+    /* ステータス用途トークン（ダークモード） */
+    --success-bg: rgba(0, 210, 106, 0.15);
+    --success-text: #00d26a;
+    --success-border: rgba(0, 210, 106, 0.3);
+    --warning-bg: rgba(250, 166, 26, 0.15);
+    --warning-text: #faa61a;
+    --warning-border: rgba(250, 166, 26, 0.3);
+    --info-bg: rgba(0, 175, 244, 0.15);
+    --info-text: #00aff4;
+    --info-border: rgba(0, 175, 244, 0.3);
+    --danger-bg: rgba(240, 71, 71, 0.15);
+    --danger-text: #f04747;
+    --danger-border: rgba(240, 71, 71, 0.3);
     
     /* 特殊用途 */
     --disabled-bg: #72767d;
@@ -121,20 +181,13 @@
     --placeholder-color: #72767d;
     --reply-bg: #42464d;
     --login-prompt-bg: #42464d;
-    --info-bg: #2f3136;
-    --info-border: #42464d;
-    --info-text: #b9bbbe;
-    --warning-bg: #2f3136;
-    --warning-border: #42464d;
-    --warning-text: #b9bbbe;
+    --modal-bg: var(--bg-primary);
     
     /* サイドバー専用 */
     --sidebar-text: #dcddde;
     --sidebar-muted: #b9bbbe;
     
-    /* 旧変数（後方互換性） */
-    --background: #36393f;
-    --text: #dcddde;
+    /* 旧変数（後方互換: 新トークンの alias） */
     --pathColor: invert(100%);
   }
 
@@ -154,9 +207,9 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--font-family);
-  background: var(--background);
+  background: var(--bg-primary);
   line-height: var(--line-height-normal);
-  color: var(--text);
+  color: var(--text-color);
   overflow: hidden;
   font-weight: var(--font-weight-normal);
   font-size: var(--font-size-base);
@@ -215,7 +268,8 @@ p {
   padding: 16px 0;
   border-bottom: 1px solid var(--border-color);
   word-wrap: break-word;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .post:last-child {
@@ -289,8 +343,8 @@ p {
 .image-link img {
   max-width: 100%;
   height: auto;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
 }
 
 /* リプライスタイル */
@@ -318,7 +372,7 @@ p {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  z-index: var(--z-sidebar-overlay);
 }
 
 @media (min-width: 768px) {
@@ -382,22 +436,23 @@ textarea {
 
 button {
   border: none;
-  background-color: #ddd;
+  background-color: var(--bg-secondary);
   outline: 0;
-  font-size: 1rem;
-  padding: 8px 16px;
+  font-size: var(--font-size-base);
+  padding: var(--space-2) var(--space-4);
   display: flex;
   align-items: center;
   cursor: pointer;
-  border-radius: 4px;
-  gap: 4px;
+  border-radius: var(--radius-sm);
+  gap: var(--space-1);
+  color: var(--text-color);
 
   &.small {
     border: var(--border);
     background: none;
     font-size: 0.8rem;
     padding: 4px 8px;
-    color: var(--text);
+    color: var(--text-color);
   }
 }
 
@@ -438,7 +493,7 @@ button {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: var(--z-modal-overlay);
 }
 
 .modal {
@@ -446,20 +501,17 @@ button {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  z-index: 1001;
+  background: var(--modal-bg);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  z-index: var(--z-modal);
   max-height: 80vh;
   max-width: 600px;
   width: calc(100vw - 20px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  @media (prefers-color-scheme: dark) {
-    background: var(--background);
-    border: var(--border)
-  }
+  border: var(--border);
 }
 
 .header,

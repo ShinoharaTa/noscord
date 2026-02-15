@@ -155,10 +155,11 @@
       </div>
       <div class="channel-list">
         {#each channels as channel}
-          <div 
-            class="channel-item" 
+          <button
+            type="button"
+            class="channel-item"
             on:click={() => goto(`/${channel.id}`)}
-            style="--accent-color: hsl({(channel.author ? parseInt(channel.author.slice(-6), 16) % 360 : 200)}, 65%, 55%)"
+            style="--accent-hue: {(channel.author ? parseInt(channel.author.slice(-6), 16) % 360 : 200)}"
           >
             <div class="channel-accent-bar"></div>
             <div class="channel-content">
@@ -180,7 +181,7 @@
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         {/each}
       </div>
     {/if}
@@ -390,6 +391,9 @@
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  border: none;
+  width: 100%;
+  text-align: left;
 }
 
 .channel-item:hover {
@@ -402,7 +406,13 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--accent-color);
+  background: hsl(var(--accent-hue, 200), 65%, 55%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .channel-accent-bar {
+    background: hsl(var(--accent-hue, 200), 65%, 65%);
+  }
 }
 
 .channel-content {
@@ -441,18 +451,6 @@
 .last-update {
   font-size: 0.8rem;
   color: var(--secondary-text);
-}
-
-.channel-actions {
-  flex-shrink: 0;
-  color: var(--secondary-text);
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.channel-item:hover .channel-actions {
-  opacity: 1;
-  color: var(--accent-color);
 }
 
 @media (max-width: 767px) {

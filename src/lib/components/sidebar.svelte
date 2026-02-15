@@ -113,9 +113,10 @@
     left: 0;
     width: var(--sidebar-width);
     height: 100vh;
+    height: 100dvh;
     background: var(--sidebar-bg);
     color: var(--sidebar-text);
-    z-index: 1000;
+    z-index: var(--z-sidebar);
     transform: translateX(-100%);
     transition: transform 0.3s ease;
     display: flex;
@@ -131,6 +132,7 @@
     .sidebar {
       top: env(safe-area-inset-top);
       height: calc(100vh - env(safe-area-inset-top));
+      height: calc(100dvh - env(safe-area-inset-top));
     }
   }
 
@@ -140,6 +142,7 @@
       transform: translateX(0);
       top: 0;
       height: 100vh;
+      height: 100dvh;
     }
 
     .sidebar-footer {

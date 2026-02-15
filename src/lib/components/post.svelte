@@ -120,6 +120,14 @@
     isImageModalOpen = false;
     document.body.style.overflow = "";
   }
+
+  function handleImageOverlayKeydown(event: KeyboardEvent) {
+    // Enter / Space で閉じる（A11y）
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      closeImageModal();
+    }
+  }
   
   // リアクションを読み込む
   const loadReactions = async () => {
@@ -340,9 +348,9 @@
   </div>
   
   {#if reply && action}
-    <a href="javascript: void(0);" class="reply-link" on:click={onClickParentId}>
+    <button type="button" class="reply-link" on:click={onClickParentId}>
       {`>>${reply.slice(0, 10)}`}
-    </a>
+    </button>
   {/if}
   {#if reply && !action}
     <span class="reply-text">{`>>${reply.slice(0, 10)}`}</span>
@@ -435,8 +443,15 @@
 
 <!-- 画像モーダル -->
 {#if isImageModalOpen}
-  <div class="image-modal-overlay" on:click={closeImageModal}>
-    <div class="image-modal" on:click|stopPropagation>
+  <div
+    class="image-modal-overlay"
+    role="button"
+    aria-label="画像モーダルを閉じる"
+    tabindex="0"
+    on:click|self={closeImageModal}
+    on:keydown={handleImageOverlayKeydown}
+  >
+    <div class="image-modal">
       <button class="image-modal-close" on:click={closeImageModal}>
         <Icon name="x" size={24} />
       </button>
@@ -552,29 +567,32 @@
   /* コンテンツエリア */
   .post-content {
     margin: 8px 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .post-content p {
     word-wrap: break-word;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     hyphens: auto;
     line-height: 1.5;
     margin: 8px 0;
   }
 
-  /* カスタム絵文字スタイル */
-  article img.custom-emoji,
-  .post-content .custom-emoji {
-    display: inline-block !important;
-    vertical-align: middle !important;
-    width: 1.3em !important;
-    height: 1.3em !important;
-    max-width: 1.3em !important;
-    max-height: 1.3em !important;
-    aspect-ratio: 1 / 1 !important;
-    margin: 0 0.1em !important;
-    border-radius: 2px !important;
-    object-fit: contain !important;
+  /* カスタム絵文字スタイル（詳細度で制御、!important 不使用） */
+  :global(article.post img.custom-emoji),
+  :global(.post-content img.custom-emoji) {
+    display: inline-block;
+    vertical-align: middle;
+    width: 1.3em;
+    height: 1.3em;
+    max-width: 1.3em;
+    max-height: 1.3em;
+    aspect-ratio: 1 / 1;
+    margin: 0 0.1em;
+    border-radius: 2px;
+    object-fit: contain;
   }
 
   /* リプライリンク */
@@ -584,6 +602,14 @@
     text-decoration: none;
     margin-bottom: 8px;
     display: block;
+  }
+
+  .reply-link {
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
   }
 
   .reply-link:hover {
@@ -617,6 +643,7 @@
     overflow-x: auto;
     padding-bottom: 8px;
     scroll-snap-type: x mandatory;
+    max-height: 280px;
   }
 
   /* スクロールバーのスタイル（WebKit系ブラウザ） */
@@ -653,6 +680,8 @@
       flex: 0 0 150px;
       width: 150px;
       height: 150px;
+      min-height: 0;
+      aspect-ratio: 1 / 1;
     }
   }
 
@@ -662,6 +691,8 @@
       flex: 0 0 36vw;
       width: 36vw;
       height: 36vw;
+      min-height: 0;
+      aspect-ratio: 1 / 1;
     }
   }
 
@@ -717,7 +748,7 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.8);
-    z-index: 1000;
+    z-index: var(--z-modal-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -881,26 +912,21 @@
   }
 
   /* リアクションボタン内の絵文字はマージンを除去 */
-  .reaction-btn .reaction-emoji,
-  .reaction-btn .custom-emoji {
-    margin: 0 !important;
+  .post-actions .reaction-btn .reaction-emoji,
+  .post-actions .reaction-btn :global(.custom-emoji) {
+    margin: 0;
   }
 
   /* リアクション絵文字画像用のスタイル */
-  :global(.reaction-emoji-img) {
-    width: 1.2em !important;
-    height: 1.2em !important;
-    vertical-align: middle !important;
-    display: inline-block !important;
-    object-fit: contain !important;
-    max-width: 1.2em !important;
-    max-height: 1.2em !important;
-    margin: 0 !important;
-  }
-
-  /* リアクションボタン内の絵文字画像は特別にマージン調整 */
-  .reaction-btn :global(.reaction-emoji-img) {
-    margin: 0 !important;
+  .post-actions .reaction-btn :global(.reaction-emoji-img) {
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: middle;
+    display: inline-block;
+    object-fit: contain;
+    max-width: 1.2em;
+    max-height: 1.2em;
+    margin: 0;
   }
 
 

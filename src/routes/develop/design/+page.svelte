@@ -287,28 +287,28 @@
         <h3>ボタン</h3>
         <div class="component-samples">
           <div class="component-item">
-            <label>プライマリボタン</label>
+            <div class="sample-label">プライマリボタン</div>
             <button class="btn btn-primary">
               <Plus size={16} />
               プライマリボタン
             </button>
           </div>
           <div class="component-item">
-            <label>セカンダリボタン</label>
+            <div class="sample-label">セカンダリボタン</div>
             <button class="btn btn-secondary">
               <Plus size={16} />
               セカンダリボタン
             </button>
           </div>
           <div class="component-item">
-            <label>危険ボタン</label>
+            <div class="sample-label">危険ボタン</div>
             <button class="btn btn-danger">
               <Plus size={16} />
               危険ボタン
             </button>
           </div>
           <div class="component-item">
-            <label>無効ボタン</label>
+            <div class="sample-label">無効ボタン</div>
             <button class="btn btn-disabled" disabled>
               <Plus size={16} />
               無効ボタン
@@ -321,19 +321,19 @@
         <h3>インプット</h3>
         <div class="component-samples">
           <div class="component-item">
-            <label>テキスト入力</label>
+            <div class="sample-label">テキスト入力</div>
             <input type="text" placeholder="テキストを入力" class="form-input" />
           </div>
           <div class="component-item">
-            <label>パスワード</label>
+            <div class="sample-label">パスワード</div>
             <input type="password" placeholder="パスワード" class="form-input" />
           </div>
           <div class="component-item">
-            <label>メール</label>
+            <div class="sample-label">メール</div>
             <input type="email" placeholder="email@example.com" class="form-input" />
           </div>
           <div class="component-item">
-            <label>無効入力</label>
+            <div class="sample-label">無効入力</div>
             <input type="text" placeholder="無効な入力" class="form-input" disabled />
           </div>
         </div>
@@ -437,22 +437,22 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 0;
+    padding: var(--space-4) 0;
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 24px;
+    margin-bottom: var(--space-6);
   }
 
   .nav-back {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     background: none;
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    padding: 8px 12px;
-    border-radius: 6px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     transition: all 0.2s;
   }
 
@@ -462,23 +462,23 @@
   }
 
   .nav-title {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
     color: var(--primary-text);
   }
 
   .nav-actions {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .nav-link {
     color: var(--primary-color);
     text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    padding: 8px 12px;
-    border-radius: 6px;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
     transition: background-color 0.2s;
   }
 
@@ -489,108 +489,108 @@
   .design-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 24px;
+    padding: var(--space-6);
   }
 
   .design-header {
     text-align: center;
-    margin-bottom: 48px;
-    padding-bottom: 24px;
+    margin-bottom: var(--space-10);
+    padding-bottom: var(--space-6);
     border-bottom: 2px solid var(--border-color);
   }
 
   .design-header h1 {
-    font-size: 2.5rem;
-    margin-bottom: 12px;
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--space-3);
     color: var(--primary-color);
   }
 
   .design-header p {
-    font-size: 1.1rem;
+    font-size: var(--font-size-lg);
     color: var(--secondary-text);
   }
 
   .design-section {
-    margin-bottom: 48px;
+    margin-bottom: var(--space-10);
   }
 
   .design-section h2 {
-    font-size: 1.75rem;
-    margin-bottom: 24px;
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--space-6);
     color: var(--primary-text);
     border-left: 4px solid var(--primary-color);
-    padding-left: 16px;
+    padding-left: var(--space-4);
   }
 
   /* アイコン比較 */
   .comparison-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 32px;
+    gap: var(--space-8);
   }
 
   .icon-group {
     background: var(--bg-secondary);
-    padding: 24px;
-    border-radius: 12px;
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border-color);
   }
 
   .icon-group h3 {
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
     color: var(--primary-text);
   }
 
   .size-selector {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .size-selector select {
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: var(--input-bg);
     color: var(--text-color);
   }
 
   .icon-category {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-6);
   }
 
   .icon-category h4 {
-    margin-bottom: 12px;
+    margin-bottom: var(--space-3);
     color: var(--primary-color);
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
   }
 
   .icon-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .icon-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px;
+    padding: var(--space-3);
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     transition: all 0.2s;
   }
 
   .icon-item:hover {
     border-color: var(--primary-color);
-    box-shadow: 0 2px 8px var(--primary-color-alpha);
+    box-shadow: var(--shadow-md);
   }
 
   .icon-display {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -605,13 +605,13 @@
   }
 
   .icon-name {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--secondary-text);
     font-family: monospace;
   }
 
   .icon-label {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--primary-text);
     margin-top: 2px;
   }
@@ -620,30 +620,30 @@
   .color-palette {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
+    gap: var(--space-6);
   }
 
   .color-group h3 {
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
     color: var(--primary-text);
   }
 
   .color-items {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .color-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .color-swatch {
     width: 48px;
     height: 48px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
   }
 
@@ -665,46 +665,46 @@
 
   /* コンポーネント */
   .component-group {
-    margin-bottom: 32px;
+    margin-bottom: var(--space-8);
   }
 
   .component-group h3 {
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
     color: var(--primary-text);
   }
 
   .component-samples {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .component-item {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 16px;
+    gap: var(--space-2);
+    padding: var(--space-4);
     background: var(--bg-secondary);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
   }
 
-  .component-item label {
-    font-size: 0.875rem;
+  .sample-label {
+    font-size: var(--font-size-sm);
     color: var(--secondary-text);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
   }
 
   /* ボタンスタイル */
   .btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
     border: none;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-weight: 500;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
     cursor: pointer;
     transition: all 0.2s;
   }
@@ -712,13 +712,13 @@
   .btn-primary {
     background: var(--primary-color);
     color: white;
-    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+    box-shadow: var(--shadow-sm);
   }
 
   .btn-primary:hover {
     background: var(--primary-color-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
+    box-shadow: var(--shadow-md);
   }
 
   .btn-secondary {
@@ -733,15 +733,15 @@
   }
 
   .btn-danger {
-    background: var(--error-color);
+    background: var(--danger-color);
     color: white;
-    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+    box-shadow: var(--shadow-sm);
   }
 
   .btn-danger:hover {
-    background: #c82333;
+    background: var(--danger-color-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    box-shadow: var(--shadow-md);
   }
 
   .btn-disabled {
@@ -752,10 +752,10 @@
 
   /* フォーム */
   .form-input {
-    padding: 8px 12px;
+    padding: var(--space-2) var(--space-3);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 0.875rem;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
     background: var(--input-bg);
     color: var(--text-color);
     transition: border-color 0.2s;
@@ -769,15 +769,15 @@
 
   /* タイポグラフィ */
   .font-info {
-    background: var(--bg-secondary, #f8f9fa);
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 24px;
-    border-left: 4px solid var(--primary-color, #059669);
+    background: var(--bg-secondary);
+    padding: var(--space-5);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-6);
+    border-left: 4px solid var(--primary-color);
   }
 
   .font-info p {
-    margin: 8px 0;
+    margin: var(--space-2) 0;
     font-size: var(--font-size-sm);
     line-height: var(--line-height-normal);
   }
@@ -785,68 +785,33 @@
   .typography-samples {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: var(--space-6);
   }
 
   .typography-item {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-  }
-
-  .typography-item label {
-    font-size: 0.875rem;
-    color: var(--secondary-text);
-    font-weight: 500;
-  }
-
-  .typography-sample {
-    color: var(--text-color);
-  }
-
-  .typography-sample.h1 {
-    font-size: 2rem;
-    font-weight: 700;
-  }
-
-  .typography-sample.h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-  }
-
-  .typography-sample.h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-
-  .typography-sample.body {
-    font-size: 1rem;
-    font-weight: 400;
-  }
-
-  .typography-sample.small {
-    font-size: 0.875rem;
-    font-weight: 400;
+    gap: var(--space-2);
   }
 
   /* スペーシング */
   .spacing-samples {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .spacing-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .spacing-demo {
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
     color: var(--primary-color);
     border: 1px solid var(--primary-color);
     background: var(--primary-color-alpha);
@@ -862,7 +827,7 @@
     }
 
     .design-container {
-      padding: 16px;
+      padding: var(--space-4);
     }
 
     .icon-grid {
@@ -871,40 +836,6 @@
 
     .component-samples {
       grid-template-columns: 1fr;
-    }
-  }
-
-  /* ダークモード */
-  @media (prefers-color-scheme: dark) {
-    .design-page {
-      --bg-primary: #1a1d21;
-      --bg-secondary: #2d3748;
-      --text-color: #ffffff;
-      --primary-text: #ffffff;
-      --secondary-text: #a0aec0;
-      --border-color: #4a5568;
-    }
-
-    .icon-item {
-      background: #2d3748;
-    }
-
-    .form-input {
-      background: #2d3748;
-      color: white;
-    }
-
-    .form-input:disabled {
-      background: #4a5568;
-    }
-
-    .color-swatch.bg-primary { 
-      background: #1a1d21; 
-      border-color: #4a5568;
-    }
-    
-    .color-swatch.bg-secondary { 
-      background: #2d3748; 
     }
   }
 </style> 

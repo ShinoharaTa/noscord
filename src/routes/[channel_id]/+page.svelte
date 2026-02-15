@@ -942,22 +942,13 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
     background: var(--chat-bg);
     overflow: hidden;
     position: relative;
   }
 
   .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    text-align: center;
-    color: var(--secondary-text);
-  }
-
-  .no-messages-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1267,12 +1258,19 @@
     margin-bottom: 16px;
     align-items: flex-start;
     width: 100%;
+    max-height: 140px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
   }
 
   .image-preview-item {
     position: relative;
     width: 100px;
     height: 100px;
+    min-width: 100px;
+    flex-shrink: 0;
     border-radius: 12px;
     overflow: visible;
     border: 2px solid var(--border-color);
@@ -1549,12 +1547,6 @@
       justify-content: space-between;
     }
 
-    .image-button {
-      flex: 0 0 auto;
-      min-height: 48px;
-      padding: 12px;
-    }
-
     .send-button {
       flex: 1;
       height: 48px;
@@ -1634,7 +1626,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10000;
+    z-index: var(--z-upload-overlay);
     backdrop-filter: blur(4px);
   }
 

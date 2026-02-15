@@ -76,7 +76,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--text-muted);
+    background: var(--muted-text);
     color: var(--bg-primary);
     border-radius: 2px;
     font-size: 12px;

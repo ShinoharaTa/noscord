@@ -31,9 +31,10 @@
   .chat-container {
     flex: 1;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
-    background: var(--chat-bg, #ffffff);
+    background: var(--chat-bg);
     overflow: hidden;
   }
 
@@ -48,16 +49,5 @@
   .chat-content.chat-content-page {
     display: flex;
     flex-direction: column;
-  }
-
-
-
-  @media (prefers-color-scheme: dark) {
-    .chat-container {
-      --chat-bg: #36393f;
-      --text-color: #dcddde;
-      --border-color: #42464d;
-      --hover-bg: #42464d;
-    }
   }
 </style> 
