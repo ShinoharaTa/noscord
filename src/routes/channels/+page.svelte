@@ -4,6 +4,7 @@
   import { goto } from "$app/navigation";
   import { parseCreated } from "$lib/app";
   import Icon from "$lib/components/icons.svelte";
+  import Spinner from "$lib/components/spinner.svelte";
   import { page } from "$app/stores";
 
   let channels = [];
@@ -141,10 +142,7 @@
 
   <div class="max-w-[1000px] w-full mx-auto p-4 md:p-6">
     {#if loading}
-      <div class="flex flex-col items-center justify-center py-[60px] px-5 text-center text-foreground">
-        <div class="loading-spinner"></div>
-        <p>チャンネル一覧を読み込み中...</p>
-      </div>
+      <Spinner message="チャンネル一覧を読み込み中..." />
     {:else if channels.length === 0}
       <div class="text-center py-[60px] px-5 text-foreground-secondary">
         <p>チャンネルが見つかりませんでした。</p>
@@ -242,19 +240,4 @@
     box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
   }
 
-  /* ローディングスピナー */
-  .loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-color);
-    border-top: 3px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 16px;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
 </style> 

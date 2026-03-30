@@ -3,6 +3,7 @@
   import { parseCreated } from "$lib/app";
   import Author from "$lib/components/author.svelte";
   import Icon from "$lib/components/icons.svelte";
+  import Spinner from "$lib/components/spinner.svelte";
   import { channelList, channelLoading, refreshChannelList } from "$lib/store";
   import type { SingleThread } from "$lib/nostr";
   import { onMount } from "svelte";
@@ -62,10 +63,7 @@
 
   <div class="max-w-[1000px] w-full mx-auto p-4 md:p-6">
     {#if loading}
-      <div class="flex flex-col items-center justify-center py-[60px] px-5 text-center text-foreground">
-        <div class="loading-spinner"></div>
-        <p>チャンネル一覧を読み込み中...</p>
-      </div>
+      <Spinner message="チャンネル一覧を読み込み中..." />
     {:else}
       <div class="bg-surface-alt border border-border rounded-lg py-6 px-5 mb-6 text-center md:p-8 md:mb-8">
         <h2 class="text-xl md:text-2xl font-semibold text-[var(--primary-text)] mb-4">ようこそ Noscord へ</h2>
@@ -129,22 +127,6 @@
 </div>
 
 <style>
-  /* アニメーション（Tailwind では表現できない） */
-  .loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-color);
-    border-top: 3px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 16px;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
   /* ホバー時のトランスフォーム */
   .primary-btn:hover {
     background: var(--primary-color-hover);

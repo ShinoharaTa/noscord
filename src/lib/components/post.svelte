@@ -3,14 +3,48 @@
   import { getReactions, react, reactWithNip07, deleteReaction, deleteReactionWithNip07 } from "$lib/nostr";
   import { getSecKey, getUseNip07, nip07Available } from "$lib/store";
   import type { Nostr } from "nosvelte";
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher, onMount, tick } from "svelte";
   import Icon from "./icons.svelte";
   const dispatch = createEventDispatcher();
+
+  let showEmojiPicker = false;
+  let emojiPickerEl: HTMLDivElement;
+  const commonEmojis = [
+    '👍', '❤️', '🔥', '😂', '😮', '😢', '👏', '🙏',
+    '⭐️', '🎉', '💯', '🤔', '👀', '✅', '🚀', '💜',
+    '😍', '🫡', '🤣', '😭', '🥳', '💪', '🙌', '⚡',
+  ];
+
+  const toggleEmojiPicker = () => {
+    showEmojiPicker = !showEmojiPicker;
+  };
+
+  const pickEmoji = (emoji: string) => {
+    showEmojiPicker = false;
+    sendReaction(emoji);
+  };
+
+  const handleClickOutside = (e: MouseEvent) => {
+    if (showEmojiPicker && emojiPickerEl && !emojiPickerEl.contains(e.target as Node)) {
+      showEmojiPicker = false;
+    }
+  };
 
   export let event: Nostr.Event<Nostr.Kind.Text>;
   export let metadata: Nostr.Event<Nostr.Kind.Metadata> | undefined = undefined;
   export let action = true;
   const parsed = parseContent(event.content);
+  
+  // メタデータからアバターURLを抽出
+  $: avatarUrl = (() => {
+    try {
+      if (metadata?.content) {
+        const content = JSON.parse(metadata.content);
+        return content.picture || null;
+      }
+    } catch { /* ignore */ }
+    return null;
+  })();
   const reply_tag = event.tags.find(
     (tag) => tag.includes("e") && tag.includes("reply"),
   );
@@ -297,9 +331,11 @@
     };
     
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('click', handleClickOutside);
     
     return () => {
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('click', handleClickOutside);
     };
   });
   
@@ -327,121 +363,107 @@
   });
 </script>
 
-<article class="post py-4 border-b border-border break-words last:border-b-0">
-  <div class="post-header mb-2 md:flex md:items-center md:gap-3 md:min-w-0">
-    <h3
-      class="post-author text-accent text-base font-semibold m-0 pl-2 whitespace-nowrap overflow-hidden text-ellipsis md:flex-1 md:min-w-0"
-      style="border-left: 4px solid #{event.pubkey.slice(0, 6)};"
-      title="{getDisplayName()} (ID: {event.pubkey.slice(0, 10)})"
-    >
-      {getDisplayName()}
-    </h3>
-    <div class="post-meta flex items-center gap-2 max-md:mt-1 max-md:pl-2 md:gap-3 md:shrink-0">
-      <aside class="text-xs text-foreground-muted whitespace-nowrap" title="投稿ID: {event.id}">
-        ID: {event.id.slice(0, 10)}
-      </aside>
-      <time 
-        class="text-sm text-foreground-muted whitespace-nowrap" 
-        data-time={parseTimeOnly(event.created_at)}
-        title={parseCreated(event.created_at)}
-      >
-        {parseTimeOnly(event.created_at)}
-      </time>
-    </div>
-  </div>
-  
-  {#if reply && action}
-    <button type="button" class="reply-link" on:click={onClickParentId}>
-      {`>>${reply.slice(0, 10)}`}
-    </button>
-  {/if}
-  {#if reply && !action}
-    <span class="reply-text">{`>>${reply.slice(0, 10)}`}</span>
-  {/if}
-  
-  <div class="post-content my-2 [overflow-wrap:anywhere] break-words">
-    <p>{@html processedText}</p>
-    {#each parsed.other_urls as url}
-      <p>
-        <a href={url} target="_blank" class="url-link">
-          {url}
-        </a>
-      </p>
-    {/each}
-    {#if eventImages.length > 0}
-      <div class="image-gallery">
-        {#each eventImages as image, index}
-          <button class="image-item" on:click={() => openImageModal(image, index)}>
-            <img src={image} alt="" />
-          </button>
-        {/each}
-      </div>
-    {/if}
-    {#each parsed.twitter_urls as url}
-      <p>
-        <a href={url} target="_blank" class="url-link">{url}</a>
-      </p>
-    {/each}
-  </div>
-  
-  {#if action}
-    <div class="post-actions mt-3 flex gap-2">
-      <button class="reply-btn small" on:click={onClickReply(event.id)}>
-        <Icon name="reply" size={16} />
-      </button>
-      
-      <!-- ⭐リアクションボタン -->
-      {#if reactions.find(r => r.content === '⭐️')}
-        {@const starReaction = reactions.find(r => r.content === '⭐️')}
-        <button 
-          class="reaction-btn small {starReaction?.hasCurrentUser ? 'user-reacted' : ''}"
-          on:click={() => sendReaction('⭐️')}
-          disabled={addingReaction || pendingReactions.has('⭐️')}
-          title="リアクション済み: {starReaction?.hasCurrentUser}, ユーザー: {currentUserPubkey?.slice(0,8)}"
-        >
-          {#if addingReaction}
-            <Icon name="loader" size={16} />
-          {:else}
-            <span class="reaction-emoji">⭐️</span>
-          {/if}
-          {#if starReaction && starReaction.count > 1}
-            {starReaction.count}
-          {/if}
-        </button>
+<article class="post">
+  <div class="post-layout">
+    <!-- アバター列 -->
+    <div class="post-avatar-col">
+      {#if avatarUrl}
+        <img src={avatarUrl} alt="" class="post-avatar" style="border-color: #{event.pubkey.slice(0, 6)};" />
       {:else}
-        <button 
-          class="reaction-btn small"
-          on:click={() => sendReaction('⭐️')}
-          disabled={addingReaction}
+        <div class="post-avatar-fallback" style="background-color: #{event.pubkey.slice(0, 6)}33; border-color: #{event.pubkey.slice(0, 6)};">
+          {getDisplayName().slice(0, 1)}
+        </div>
+      {/if}
+    </div>
+
+    <!-- コンテンツ列 -->
+    <div class="post-body">
+      <div class="post-header">
+        <h3 class="post-author" title="{getDisplayName()} ({event.pubkey.slice(0, 10)})">
+          {getDisplayName()}
+        </h3>
+        <span class="post-handle">@{event.pubkey.slice(0, 8)}</span>
+        <time
+          class="post-time"
+          data-time={parseTimeOnly(event.created_at)}
+          title="{parseCreated(event.created_at)} — ID: {event.id.slice(0, 10)}"
         >
-          {#if addingReaction}
-            <Icon name="loader" size={16} />
-          {:else}
-            <span class="reaction-emoji">⭐️</span>
-          {/if}
+          {parseTimeOnly(event.created_at)}
+        </time>
+      </div>
+
+      {#if reply && action}
+        <button type="button" class="reply-link" on:click={onClickParentId}>
+          {`>>${reply.slice(0, 10)}`}
         </button>
       {/if}
-      
-      <!-- その他のリアクションボタン -->
-      {#each reactions.filter(r => r.content !== '⭐️') as reaction (reaction.content)}
-        <button 
-          class="reaction-btn small {reaction.hasCurrentUser ? 'user-reacted' : ''}"
-          on:click={() => sendReaction(reaction.content)}
-          disabled={addingReaction || pendingReactions.has(reaction.content)}
-          title="リアクション済み: {reaction.hasCurrentUser}, ID: {reaction.currentUserReactionId?.slice(0,8)}"
-        >
-          <span class="reaction-emoji">{@html processReactionEmoji(reaction.content, reaction.sampleEvent)}</span>
-          {#if reaction.count > 1}
-            {reaction.count}
-          {/if}
-        </button>
-      {/each}
-      
+      {#if reply && !action}
+        <span class="reply-text">{`>>${reply.slice(0, 10)}`}</span>
+      {/if}
 
+      <div class="post-content">
+        <p>{@html processedText}</p>
+        {#each parsed.other_urls as url}
+          <p>
+            <a href={url} target="_blank" class="url-link">{url}</a>
+          </p>
+        {/each}
+        {#if eventImages.length > 0}
+          <div class="image-gallery">
+            {#each eventImages as image, index}
+              <button class="image-item" on:click={() => openImageModal(image, index)}>
+                <img src={image} alt="" />
+              </button>
+            {/each}
+          </div>
+        {/if}
+        {#each parsed.twitter_urls as url}
+          <p>
+            <a href={url} target="_blank" class="url-link">{url}</a>
+          </p>
+        {/each}
+      </div>
+
+      {#if action}
+        <div class="post-actions">
+          <button class="action-btn" on:click={onClickReply(event.id)} title="リプライ">
+            <Icon name="reply" size={16} />
+          </button>
+
+          {#each reactions as reaction (reaction.content)}
+            <button
+              class="reaction-btn {reaction.hasCurrentUser ? 'user-reacted' : ''}"
+              on:click={() => sendReaction(reaction.content)}
+              disabled={addingReaction || pendingReactions.has(reaction.content)}
+            >
+              <span class="reaction-emoji">{@html processReactionEmoji(reaction.content, reaction.sampleEvent)}</span>
+              <span class="reaction-count">{reaction.count}</span>
+            </button>
+          {/each}
+
+          <div class="emoji-picker-wrapper" bind:this={emojiPickerEl}>
+            <button
+              class="action-btn add-reaction-btn"
+              on:click|stopPropagation={toggleEmojiPicker}
+              title="リアクションを追加"
+              disabled={addingReaction}
+            >
+              <Icon name="plus" size={16} />
+            </button>
+            {#if showEmojiPicker}
+              <div class="emoji-picker">
+                {#each commonEmojis as emoji}
+                  <button class="emoji-option" on:click|stopPropagation={() => pickEmoji(emoji)}>
+                    {emoji}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/if}
     </div>
-  {/if}
-
-
+  </div>
 </article>
 
 <!-- 画像モーダル -->
@@ -490,14 +512,107 @@
 {/if}
 
 <style>
-  /* コンテンツ内の段落 */
+  /* === SNSタイムラインレイアウト === */
+  .post {
+    padding: 12px 0;
+    transition: background-color 0.15s;
+  }
+
+  .post:hover {
+    background-color: var(--hover-bg, rgba(255, 255, 255, 0.03));
+  }
+
+  .post-layout {
+    display: flex;
+    gap: 12px;
+  }
+
+  /* アバター列 */
+  .post-avatar-col {
+    flex-shrink: 0;
+    width: 48px;
+    padding-top: 2px;
+  }
+
+  .post-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2.5px solid currentColor;
+  }
+
+  .post-avatar-fallback {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--primary-text, #e7e9ea);
+    text-transform: uppercase;
+    border: 2.5px solid currentColor;
+  }
+
+  /* コンテンツ列 */
+  .post-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ヘッダー行 */
+  .post-header {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    line-height: 1.3;
+  }
+
+  .post-author {
+    font-weight: 700;
+    font-size: 0.938rem;
+    color: var(--primary-text, #e7e9ea);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .post-handle {
+    font-size: 0.813rem;
+    color: var(--muted-text, #71767b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .post-time {
+    font-size: 0.813rem;
+    color: var(--muted-text, #71767b);
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  /* コンテンツ */
+  .post-content {
+    margin-top: 2px;
+  }
+
   .post-content p {
     word-wrap: break-word;
     overflow-wrap: anywhere;
     word-break: break-word;
     hyphens: auto;
     line-height: 1.5;
-    margin: 8px 0;
+    margin: 4px 0;
+    font-size: 0.938rem;
   }
 
   /* カスタム絵文字スタイル（詳細度で制御、!important 不使用） */
@@ -632,25 +747,32 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
-  .reply-btn {
+  /* アクション行 */
+  .post-actions {
     display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border: none;
-    background: #4a5568;
-    color: white;
-    font-size: 0.875rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-    min-height: 2.25em;
   }
 
-  .reply-btn:hover {
-    background: #2d3748;
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--muted-text, #71767b);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover {
+    background: rgba(29, 155, 240, 0.1);
+    color: var(--primary-color, #1d9bf0);
   }
 
   /* 画像モーダル */
@@ -759,6 +881,31 @@
 
   /* レスポンシブ対応 */
   @media (max-width: 767px) {
+    .post {
+      padding: 10px 0;
+    }
+
+    .post-avatar-col {
+      width: 44px;
+    }
+
+    .post-avatar, .post-avatar-fallback {
+      width: 44px;
+      height: 44px;
+    }
+
+    .post-layout {
+      gap: 10px;
+    }
+
+    .post-author {
+      max-width: 120px;
+    }
+
+    .post-handle {
+      max-width: 70px;
+    }
+
     .image-modal-overlay {
       padding: 10px;
     }
@@ -791,37 +938,96 @@
   .reaction-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border: none;
-    background: #4a5568;
-    color: white;
-    font-size: 0.875rem;
-    border-radius: 6px;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px solid var(--border-color, #2f3336);
+    background: transparent;
+    color: var(--muted-text, #71767b);
+    font-size: 0.813rem;
+    border-radius: 9999px;
     cursor: pointer;
-    transition: all 0.2s;
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-    min-height: 2.25em; /* line-height 1.5 * 1.5em = 投稿テキストに合わせる */
+    transition: all 0.15s;
+    line-height: 1.4;
+    height: 28px;
   }
 
   .reaction-btn:hover {
-    background: #2d3748;
+    border-color: var(--primary-color, #1d9bf0);
+    background: rgba(29, 155, 240, 0.1);
+    color: var(--primary-color, #1d9bf0);
   }
 
   .reaction-btn.user-reacted {
-    background: var(--primary-color);
-    color: white;
+    border-color: var(--primary-color, #1d9bf0);
+    background: rgba(29, 155, 240, 0.15);
+    color: var(--primary-color, #1d9bf0);
   }
 
   .reaction-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
   .reaction-emoji {
-    font-size: 1.1em;
+    font-size: 1em;
     line-height: 1;
+  }
+
+  .reaction-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 0.8em;
+    text-align: center;
+  }
+
+  /* Emoji Picker */
+  .emoji-picker-wrapper {
+    position: relative;
+  }
+
+  .add-reaction-btn {
+    border: 1px dashed var(--border-color, #2f3336);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+  }
+
+  .add-reaction-btn:hover {
+    border-style: solid;
+  }
+
+  .emoji-picker {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    padding: 8px;
+    background: var(--bg-primary, #15202b);
+    border: 1px solid var(--border-color, #2f3336);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    width: max-content;
+  }
+
+  .emoji-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.1s;
+  }
+
+  .emoji-option:hover {
+    background: var(--hover-bg, rgba(255, 255, 255, 0.1));
   }
 
   /* リアクションボタン内の絵文字はマージンを除去 */

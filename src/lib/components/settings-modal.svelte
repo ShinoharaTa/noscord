@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fly } from 'svelte/transition';
   import { 
     settingsModal, 
     getSecKey, 
@@ -13,60 +14,68 @@
     nip07PubKey,
     useNip07
   } from '$lib/store';
+  import { getRelays, addRelay, removeRelay } from '$lib/nostr';
   import { generateSecretKey } from 'nostr-tools';
   import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
   import { nip19 } from 'nostr-tools';
   import Icon from './icons.svelte';
+
+  type Section = 'keys' | 'nip07' | 'relays' | 'about';
+  let activeSection: Section = 'keys';
 
   let secretKey = '';
   let showSecretKey = false;
   let nip07PublicKey = '';
   let loadingNip07 = false;
 
+  let currentRelays: string[] = [];
+  let newRelayUrl = '';
+
+  const sections: { id: Section; icon: string; label: string; desc: string }[] = [
+    { id: 'keys', icon: 'key', label: '秘密鍵', desc: '鍵の管理と生成' },
+    { id: 'nip07', icon: 'globe', label: 'ブラウザ拡張機能', desc: 'NIP-07 署名連携' },
+    { id: 'relays', icon: 'share', label: 'リレー', desc: '接続先の管理' },
+    { id: 'about', icon: 'info', label: 'アプリ情報', desc: 'バージョンとライセンス' },
+  ];
+
+  const selectSection = (id: Section) => {
+    activeSection = id;
+  };
+
   onMount(() => {
     const initialize = async () => {
-    // 既存の秘密鍵を読み込み（Hex形式をnsec1形式に変換）
-    const existingKey = getSecKey();
-    if (existingKey) {
-      try {
-        // Hex形式からnsec1形式に変換
-        secretKey = nip19.nsecEncode(hexToBytes(existingKey));
-      } catch (error) {
-        // 変換に失敗した場合はそのまま表示
-        secretKey = existingKey;
+      const existingKey = getSecKey();
+      if (existingKey) {
+        try {
+          secretKey = nip19.nsecEncode(hexToBytes(existingKey));
+        } catch {
+          secretKey = existingKey;
+        }
       }
-    }
-
-    // NIP-07の可用性をチェック
-    checkNip07Availability();
-    
-    // 既存のNIP-07公開鍵を取得
-    if ($nip07Available && $useNip07) {
-      await loadNip07PublicKey();
-    }
+      checkNip07Availability();
+      currentRelays = getRelays();
+      if ($nip07Available && $useNip07) {
+        await loadNip07PublicKey();
+      }
     };
     void initialize();
 
-    // Escキーでモーダルを閉じる
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && $settingsModal) {
         settingsModal.set(false);
       }
     };
-
     document.addEventListener('keydown', handleKeydown);
-
     return () => {
       document.removeEventListener('keydown', handleKeydown);
-      // コンポーネント破棄時にスクロールを復元
       document.body.style.overflow = '';
     };
   });
 
-  // モーダルが開いた時にスクロールを禁止
   $: if (typeof document !== 'undefined') {
     if ($settingsModal) {
       document.body.style.overflow = 'hidden';
+      currentRelays = getRelays();
     } else {
       document.body.style.overflow = '';
     }
@@ -75,30 +84,25 @@
   const saveSecretKey = () => {
     try {
       let hexKey = '';
-      
       if (secretKey.startsWith('nsec1')) {
-        // nsec1形式の場合はHex形式に変換
         const decoded = nip19.decode(secretKey);
         hexKey = bytesToHex(decoded.data as Uint8Array);
       } else if (secretKey.length === 64) {
-        // 既にHex形式の場合はそのまま使用
         hexKey = secretKey;
       } else {
         alert('秘密鍵はnsec1形式または64文字のHex形式で入力してください');
         return;
       }
-
       saveToIdentifiedKey(hexKey);
       alert('秘密鍵を保存しました');
-    } catch (error) {
-      alert('秘密鍵の形式が正しくありません。nsec1形式または64文字のHex形式で入力してください');
+    } catch {
+      alert('秘密鍵の形式が正しくありません');
     }
   };
 
   const generateNewKey = () => {
     const secretKeyBytes = generateSecretKey();
     const hexKey = bytesToHex(secretKeyBytes);
-    // 新しく生成した鍵をnsec1形式で表示
     secretKey = nip19.nsecEncode(hexToBytes(hexKey));
   };
 
@@ -107,29 +111,19 @@
   };
 
   const deleteSecretKey = () => {
-    const confirmed = confirm(
-      '本当に秘密鍵を削除しますか？\n\nこの操作は取り消せません。秘密鍵を削除すると、このアカウントにアクセスできなくなります。\n\n削除する前に秘密鍵をバックアップしていることを確認してください。'
-    );
-    
-    if (confirmed) {
+    if (confirm('本当に秘密鍵を削除しますか？\n\nこの操作は取り消せません。')) {
       removeIdentifiedKey();
       secretKey = '';
-      alert('秘密鍵を削除しました。');
     }
   };
 
-  // NIP-07関連の関数
   const loadNip07PublicKey = async () => {
     if (!$nip07Available) return;
-    
     loadingNip07 = true;
     try {
       const pubkey = await getNip07PublicKey();
-      if (pubkey) {
-        nip07PublicKey = pubkey;
-      }
-    } catch (error) {
-      console.error('Failed to load NIP-07 public key:', error);
+      if (pubkey) nip07PublicKey = pubkey;
+    } catch {
       alert('ブラウザ拡張機能から公開鍵を取得できませんでした。');
     } finally {
       loadingNip07 = false;
@@ -138,300 +132,848 @@
 
   const connectNip07 = async () => {
     if (!$nip07Available) {
-      alert('NIP-07対応のブラウザ拡張機能（nos2x等）がインストールされていません。');
+      alert('NIP-07対応のブラウザ拡張機能が見つかりません。');
       return;
     }
-
     await loadNip07PublicKey();
     if (nip07PublicKey) {
       setUseNip07(true);
-      alert('ブラウザ拡張機能との接続が完了しました。');
+      alert('接続完了しました。');
     }
   };
 
   const disconnectNip07 = () => {
     setUseNip07(false);
     nip07PublicKey = '';
-    alert('ブラウザ拡張機能との接続を解除しました。');
   };
 
-  const closeModal = () => settingsModal.set(false);
-
-  const handleOverlayKeydown = (event: KeyboardEvent) => {
-    // Enter / Space で閉じる（A11y）
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      closeModal();
+  const handleAddRelay = () => {
+    const url = newRelayUrl.trim();
+    if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+      alert('リレーURLは wss:// または ws:// で始まる必要があります');
+      return;
     }
+    addRelay(url);
+    currentRelays = getRelays();
+    newRelayUrl = '';
   };
+
+  const handleRemoveRelay = (url: string) => {
+    removeRelay(url);
+    currentRelays = getRelays();
+  };
+
+  const closeSettings = () => settingsModal.set(false);
 </script>
 
-<!-- 設定モーダル -->
 {#if $settingsModal}
-  <div
-    class="settings-overlay"
-    role="button"
-    aria-label="設定モーダルを閉じる"
-    tabindex="0"
-    on:click={closeModal}
-    on:keydown={handleOverlayKeydown}
-  ></div>
-  <div class="settings-modal">
-    <div class="flex justify-between items-center py-5 px-6 border-b border-border shrink-0">
-      <h2 class="m-0 text-xl font-semibold text-foreground">設定</h2>
-      <button class="bg-transparent border-none text-foreground-secondary cursor-pointer p-1 rounded-sm transition-colors flex items-center justify-center hover:bg-surface-hover" on:click={closeModal}>
-        <Icon name="x" size={20} />
+  <div class="settings-screen" transition:fly={{ y: 20, duration: 200 }}>
+    <!-- 共通ヘッダー -->
+    <header class="settings-header">
+      <button class="back-btn" on:click={closeSettings}>
+        <Icon name="left" size={20} />
+        <span>戻る</span>
       </button>
-    </div>
-    <div class="p-0 overflow-y-auto flex-1 max-h-[60vh]">
-      <div class="p-6">
-        <!-- キー管理セクション -->
-        <div class="settings-section mb-8 pb-8 border-b border-border">
-          <div class="flex items-center gap-3 mb-3">
-            <Icon name="key" size={20} />
-            <h3 class="m-0 text-xl font-semibold text-foreground">秘密鍵の管理</h3>
-          </div>
-          <p class="mb-6 text-foreground-secondary leading-normal">Nostrプロトコルで使用する秘密鍵の設定と管理を行います。</p>
-          
-          <div class="mb-6">
-            <div class="mb-5">
-              <label for="secret-key" class="block mb-2 font-medium text-foreground text-sm">秘密鍵 (nsec1形式)</label>
-              <div class="relative flex items-center">
-                {#if showSecretKey}
+      <h1 class="header-title">設定</h1>
+      <!-- モバイルのみ: 右側にスペーサー -->
+      <div class="header-spacer"></div>
+    </header>
+
+    <div class="settings-body">
+      <!-- 左ペイン: ナビゲーション -->
+      <nav class="settings-nav">
+        <div class="nav-list">
+          {#each sections as section}
+            <button
+              class="nav-item"
+              class:active={activeSection === section.id}
+              on:click={() => selectSection(section.id)}
+            >
+              <div class="nav-icon-wrap" class:active={activeSection === section.id}>
+                <Icon name={section.icon} size={18} />
+              </div>
+              <div class="nav-text">
+                <span class="nav-label">{section.label}</span>
+                <span class="nav-desc">{section.desc}</span>
+              </div>
+              <Icon name="right" size={14} class="nav-chevron" />
+            </button>
+          {/each}
+        </div>
+      </nav>
+
+      <!-- 右ペイン: 詳細 -->
+      <main class="settings-main">
+        <!-- モバイルタブ -->
+        <div class="mobile-tabs">
+          {#each sections as section}
+            <button
+              class="mobile-tab"
+              class:active={activeSection === section.id}
+              on:click={() => selectSection(section.id)}
+            >
+              <Icon name={section.icon} size={14} />
+              <span>{section.label}</span>
+            </button>
+          {/each}
+        </div>
+
+        <div class="main-scroll">
+          {#if activeSection === 'keys'}
+            <div class="section-header">
+              <h2>秘密鍵の管理</h2>
+              <p>Nostrで使用する秘密鍵の設定と管理を行います。</p>
+            </div>
+
+            <div class="card">
+              <div class="card-body">
+                <label class="field-label" for="secret-key">秘密鍵 (nsec1形式)</label>
+                <div class="input-wrap">
                   <input
                     id="secret-key"
                     type="text"
                     bind:value={secretKey}
-                    placeholder="nsec1... または64文字のHex形式"
-                    class="form-input w-full py-3 px-4 pr-12 border border-border rounded-md bg-surface-input text-foreground text-sm font-mono transition-colors h-11 max-w-full"
+                    placeholder="nsec1... または64文字のHex"
+                    class="field-input mono"
+                    class:masked={!showSecretKey}
+                    autocomplete="off"
                   />
-                {:else}
-                  <input
-                    id="secret-key"
-                    type="password"
-                    bind:value={secretKey}
-                    placeholder="nsec1... または64文字のHex形式"
-                    class="form-input w-full py-3 px-4 pr-12 border border-border rounded-md bg-surface-input text-foreground text-sm font-mono transition-colors h-11 max-w-full"
-                  />
-                {/if}
-                <button
-                  type="button"
-                  class="password-toggle absolute right-3 bg-transparent border-none text-foreground-secondary cursor-pointer p-1 rounded-sm transition-all flex items-center justify-center hover:bg-surface-hover hover:text-foreground"
-                  on:click={toggleSecretKeyVisibility}
-                  title={showSecretKey ? '秘密鍵を非表示' : '秘密鍵を表示'}
-                >
-                  <Icon name={showSecretKey ? 'eye-off' : 'eye'} size={16} />
-                </button>
-              </div>
-              <p class="mt-2 text-xs text-foreground-secondary">nsec1形式（推奨）または64文字のHex形式で入力してください。</p>
-            </div>
-            
-            <div class="flex gap-3 flex-wrap">
-              <button class="flex items-center gap-2 py-2.5 px-4 border-none rounded-md text-sm cursor-pointer transition-all font-medium bg-accent text-white hover:bg-accent-hover" on:click={saveSecretKey}>
-                <Icon name="key" size={16} />
-                <span>秘密鍵を保存</span>
-              </button>
-              <button class="flex items-center gap-2 py-2.5 px-4 rounded-md text-sm cursor-pointer transition-all font-medium bg-surface-alt text-foreground border border-border hover:bg-surface-hover" on:click={generateNewKey}>
-                <Icon name="refresh" size={16} />
-                <span>新しい鍵を生成</span>
-              </button>
-              {#if secretKey}
-                <button class="flex items-center gap-2 py-2.5 px-4 border-none rounded-md text-sm cursor-pointer transition-all font-medium bg-danger text-white hover:bg-danger-hover" on:click={deleteSecretKey}>
-                  <Icon name="trash" size={16} />
-                  <span>秘密鍵を削除</span>
-                </button>
-              {/if}
-            </div>
-          </div>
-          
-          <div class="flex gap-3 p-4 bg-warning-bg border border-warning-border rounded-md text-warning-text text-sm leading-snug">
-            <Icon name="info" size={16} />
-            <div>
-              <strong>重要:</strong> 秘密鍵は安全に保管してください。この鍵を紛失すると、アカウントにアクセスできなくなります。
-            </div>
-          </div>
-        </div>
-
-        <!-- NIP-07 ブラウザ拡張機能セクション -->
-        <div class="settings-section mb-8 pb-8 border-b border-border">
-          <div class="flex items-center gap-3 mb-3">
-            <Icon name="globe" size={20} />
-            <h3 class="m-0 text-xl font-semibold text-foreground">ブラウザ拡張機能 (NIP-07)</h3>
-          </div>
-          <p class="mb-6 text-foreground-secondary leading-normal">nos2x等のブラウザ拡張機能を使用して安全に署名を行うことができます。</p>
-          
-          <div class="mb-4">
-            {#if $nip07Available}
-              <div class="flex items-center gap-2 py-2 px-3 rounded-md text-sm mb-2 bg-success-bg text-success-text border border-success-border">
-                <Icon name="check-circle" size={16} />
-                <span>ブラウザ拡張機能が利用可能です</span>
-              </div>
-            {:else}
-              <div class="flex items-center gap-2 py-2 px-3 rounded-md text-sm mb-2 bg-warning-bg text-warning-text border border-warning-border">
-                <Icon name="x-circle" size={16} />
-                <span>ブラウザ拡張機能が見つかりません</span>
-              </div>
-            {/if}
-            
-            {#if $useNip07}
-              <div class="flex items-center gap-2 py-2 px-3 rounded-md text-sm mb-2 bg-info-bg text-info-text border border-info-border">
-                <Icon name="link" size={16} />
-                <span>ブラウザ拡張機能を使用中</span>
-              </div>
-            {/if}
-          </div>
-
-          {#if $nip07Available}
-            <div class="mt-4">
-              {#if $useNip07}
-                <div class="mb-5">
-                  <label for="nip07-public-key" class="block mb-2 font-medium text-foreground text-sm">公開鍵</label>
-                  <div>
-                    <input
-                      id="nip07-public-key"
-                      type="text"
-                      value={nip07PublicKey || $nip07PubKey || '読み込み中...'}
-                      readonly
-                      class="form-input w-full py-3 px-4 border border-border rounded-md bg-surface-input text-foreground text-sm font-mono transition-colors h-11 max-w-full"
-                    />
-                  </div>
-                </div>
-                
-                <div class="flex gap-3 flex-wrap">
-                  <button class="flex items-center gap-2 py-2.5 px-4 rounded-md text-sm cursor-pointer transition-all font-medium bg-surface-alt text-foreground border border-border hover:bg-surface-hover" on:click={disconnectNip07}>
-                    <Icon name="unlink" size={16} />
-                    <span>拡張機能との接続を解除</span>
+                  <button class="input-action" on:click={toggleSecretKeyVisibility} title={showSecretKey ? '非表示' : '表示'}>
+                    <Icon name={showSecretKey ? 'eye-off' : 'eye'} size={16} />
                   </button>
                 </div>
-              {:else}
-                <div class="flex gap-3 flex-wrap">
-                  <button 
-                    class="flex items-center gap-2 py-2.5 px-4 border-none rounded-md text-sm cursor-pointer transition-all font-medium bg-accent text-white hover:bg-accent-hover" 
-                    on:click={connectNip07}
-                    disabled={loadingNip07}
-                  >
+                <p class="field-hint">nsec1形式（推奨）または64文字のHex形式</p>
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary" on:click={saveSecretKey}>
+                  <Icon name="check" size={15} /><span>保存</span>
+                </button>
+                <button class="btn btn-ghost" on:click={generateNewKey}>
+                  <Icon name="refresh" size={15} /><span>新しい鍵を生成</span>
+                </button>
+                {#if secretKey}
+                  <button class="btn btn-danger-ghost" on:click={deleteSecretKey}>
+                    <Icon name="trash" size={15} /><span>削除</span>
+                  </button>
+                {/if}
+              </div>
+            </div>
+
+            <div class="notice notice-warn">
+              <Icon name="info" size={15} />
+              <div>
+                <strong>重要</strong>
+                <p>秘密鍵は安全に保管してください。紛失するとアカウントにアクセスできなくなります。</p>
+              </div>
+            </div>
+
+          {:else if activeSection === 'nip07'}
+            <div class="section-header">
+              <h2>ブラウザ拡張機能</h2>
+              <p>nos2x等のNIP-07拡張機能を使って安全に署名できます。</p>
+            </div>
+
+            <div class="card">
+              <div class="card-row">
+                <span class="row-label">拡張機能</span>
+                <span class="row-value">
+                  {#if $nip07Available}
+                    <span class="status-dot status-ok"></span> 利用可能
+                  {:else}
+                    <span class="status-dot status-ng"></span> 未検出
+                  {/if}
+                </span>
+              </div>
+              <div class="card-row">
+                <span class="row-label">接続状態</span>
+                <span class="row-value">
+                  {#if $useNip07}
+                    <span class="status-dot status-ok"></span> 接続中
+                  {:else}
+                    <span class="status-dot status-idle"></span> 未接続
+                  {/if}
+                </span>
+              </div>
+              {#if $useNip07 && (nip07PublicKey || $nip07PubKey)}
+                <div class="card-row mono-value">
+                  <span class="row-label">公開鍵</span>
+                  <span class="row-value mono">{(nip07PublicKey || $nip07PubKey || '').slice(0, 24)}...</span>
+                </div>
+              {/if}
+            </div>
+
+            {#if $nip07Available}
+              <div class="btn-area">
+                {#if $useNip07}
+                  <button class="btn btn-ghost" on:click={disconnectNip07}>
+                    <Icon name="unlink" size={15} /><span>接続を解除</span>
+                  </button>
+                {:else}
+                  <button class="btn btn-primary" on:click={connectNip07} disabled={loadingNip07}>
                     {#if loadingNip07}
-                      <Icon name="loader" size={16} />
-                      <span>接続中...</span>
+                      <Icon name="loader" size={15} /><span>接続中...</span>
                     {:else}
-                      <Icon name="link" size={16} />
-                      <span>ブラウザ拡張機能と接続</span>
+                      <Icon name="link" size={15} /><span>拡張機能と接続</span>
                     {/if}
                   </button>
+                {/if}
+              </div>
+            {:else}
+              <div class="notice notice-info">
+                <Icon name="info" size={15} />
+                <div>
+                  <strong>推奨</strong>
+                  <p>nos2x等のNIP-07対応ブラウザ拡張機能をインストールすると、秘密鍵をアプリに渡さずに署名できます。</p>
+                </div>
+              </div>
+            {/if}
+
+          {:else if activeSection === 'relays'}
+            <div class="section-header">
+              <h2>リレー設定</h2>
+              <p>Nostrイベントの送受信に使うリレーサーバーを管理します。</p>
+            </div>
+
+            <div class="card">
+              {#each currentRelays as relay, i}
+                <div class="card-row relay-row">
+                  <span class="row-value mono relay-url-text">{relay}</span>
+                  <button class="row-action" on:click={() => handleRemoveRelay(relay)} title="削除">
+                    <Icon name="trash" size={14} />
+                  </button>
+                </div>
+              {/each}
+              {#if currentRelays.length === 0}
+                <div class="card-row empty-row">
+                  <span class="row-label">リレーが設定されていません</span>
                 </div>
               {/if}
             </div>
-          {:else}
-            <div class="flex gap-3 p-3 bg-info-bg border border-info-border rounded-md text-sm leading-snug text-info-text">
-              <Icon name="info" size={16} />
-              <div>
-                <strong>推奨:</strong> nos2x等のNIP-07対応ブラウザ拡張機能をインストールすると、より安全に署名を行うことができます。
+
+            <div class="card" style="margin-top: 12px;">
+              <div class="card-body">
+                <label class="field-label" for="new-relay">リレーを追加</label>
+                <div class="input-with-btn">
+                  <input
+                    id="new-relay"
+                    type="text"
+                    bind:value={newRelayUrl}
+                    placeholder="wss://relay.example.com"
+                    class="field-input mono"
+                    autocomplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    on:keydown={(e) => e.key === 'Enter' && handleAddRelay()}
+                  />
+                  <button class="btn btn-primary btn-compact" on:click={handleAddRelay}>追加</button>
+                </div>
               </div>
+            </div>
+
+          {:else if activeSection === 'about'}
+            <div class="section-header">
+              <h2>Noscord</h2>
+              <p>Nostrプロトコルを使用したパブリックチャットクライアント</p>
+            </div>
+
+            <div class="card">
+              <div class="card-row">
+                <span class="row-label">バージョン</span>
+                <span class="row-value">1.0.0</span>
+              </div>
+              <div class="card-row">
+                <span class="row-label">プロトコル</span>
+                <span class="row-value">Nostr (NIP-28)</span>
+              </div>
+              <div class="card-row">
+                <span class="row-label">ライセンス</span>
+                <span class="row-value">MIT License</span>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 12px;">
+              <div class="card-row">
+                <span class="row-label">リアルタイムチャット</span>
+                <span class="row-value row-check"><Icon name="check" size={14} /></span>
+              </div>
+              <div class="card-row">
+                <span class="row-label">チャンネル作成・参加</span>
+                <span class="row-value row-check"><Icon name="check" size={14} /></span>
+              </div>
+              <div class="card-row">
+                <span class="row-label">NIP-07 / 秘密鍵認証</span>
+                <span class="row-value row-check"><Icon name="check" size={14} /></span>
+              </div>
+              <div class="card-row">
+                <span class="row-label">カスタム絵文字・リアクション</span>
+                <span class="row-value row-check"><Icon name="check" size={14} /></span>
+              </div>
+              <div class="card-row">
+                <span class="row-label">レスポンシブ・ダークモード</span>
+                <span class="row-value row-check"><Icon name="check" size={14} /></span>
+              </div>
+            </div>
+
+            <div class="link-row">
+              <a href="https://github.com" target="_blank" rel="noopener">
+                <Icon name="globe" size={14} /><span>GitHub</span>
+              </a>
+              <a href="https://nostr.com" target="_blank" rel="noopener">
+                <Icon name="globe" size={14} /><span>Nostr公式サイト</span>
+              </a>
             </div>
           {/if}
         </div>
-
-        <!-- アプリについてセクション -->
-        <div class="settings-section">
-          <div class="flex items-center gap-3 mb-3">
-            <Icon name="info" size={20} />
-            <h3 class="m-0 text-xl font-semibold text-foreground">Noscord について</h3>
-          </div>
-          <p class="mb-6 text-foreground-secondary leading-normal">Nostrプロトコルを使用したパブリックチャットクライアントです。</p>
-          
-          <div class="mb-8">
-            <h4 class="mb-4 text-lg font-semibold text-foreground">アプリケーション情報</h4>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-              <div class="flex justify-between py-3 px-4 bg-surface-alt rounded-md">
-                <span class="font-medium text-foreground-secondary">バージョン</span>
-                <span class="font-semibold text-foreground">1.0.0</span>
-              </div>
-              <div class="flex justify-between py-3 px-4 bg-surface-alt rounded-md">
-                <span class="font-medium text-foreground-secondary">プロトコル</span>
-                <span class="font-semibold text-foreground">Nostr</span>
-              </div>
-              <div class="flex justify-between py-3 px-4 bg-surface-alt rounded-md">
-                <span class="font-medium text-foreground-secondary">ライセンス</span>
-                <span class="font-semibold text-foreground">MIT License</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="mb-8">
-            <h4 class="mb-4 text-lg font-semibold text-foreground">機能</h4>
-            <ul class="m-0 pl-5 text-foreground">
-              <li class="mb-2 leading-snug">リアルタイムチャット</li>
-              <li class="mb-2 leading-snug">チャンネル作成・参加</li>
-              <li class="mb-2 leading-snug">秘密鍵による認証</li>
-              <li class="mb-2 leading-snug">レスポンシブデザイン</li>
-              <li class="mb-2 leading-snug">ダークモード対応</li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 class="mb-4 text-lg font-semibold text-foreground">開発者情報</h4>
-            <p>このアプリケーションはオープンソースプロジェクトです。</p>
-            <div class="flex gap-4 flex-wrap">
-              <a href="https://github.com" class="text-accent no-underline font-medium transition-colors hover:text-accent-hover hover:underline" target="_blank" rel="noopener">
-                GitHub
-              </a>
-              <a href="https://nostr.com" class="text-accent no-underline font-medium transition-colors hover:text-accent-hover hover:underline" target="_blank" rel="noopener">
-                Nostr公式サイト
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   </div>
 {/if}
 
 <style>
-  /* モーダル配置（Tailwind では表現が複雑） */
-  .settings-overlay {
+  /* ===== 全画面コンテナ ===== */
+  .settings-screen {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: var(--z-settings-overlay);
-  }
-
-  .settings-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: var(--modal-bg);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    z-index: var(--z-settings-modal);
-    max-height: 80vh;
-    max-width: 500px;
-    width: calc(100vw - 32px);
+    inset: 0;
+    z-index: var(--z-settings-modal, 901);
+    background: var(--bg-secondary, #f5f5f5);
     display: flex;
     flex-direction: column;
+  }
+
+  /* ===== ヘッダー ===== */
+  .settings-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    height: 52px;
+    flex-shrink: 0;
+    background: var(--bg-primary, #fff);
+    border-bottom: 1px solid var(--border-color, #e5e5e5);
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    color: var(--primary-color, #059669);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 8px 6px 2px;
+    border-radius: 6px;
+    transition: background 0.12s;
+  }
+
+  .back-btn:hover {
+    background: var(--hover-bg, rgba(0,0,0,0.04));
+  }
+
+  .header-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-text, #1a1d21);
+    margin: 0;
+  }
+
+  .header-spacer {
+    flex: 1;
+  }
+
+  /* ===== ボディ (2カラム) ===== */
+  .settings-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* ===== 左ナビ ===== */
+  .settings-nav {
+    width: 280px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    padding: 16px 12px;
+  }
+
+  .nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    color: var(--primary-text, #1a1d21);
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.12s;
+    text-align: left;
+  }
+
+  .nav-item:hover {
+    background: var(--hover-bg, rgba(0,0,0,0.04));
+  }
+
+  .nav-item.active {
+    background: var(--primary-color, #059669);
+    color: white;
+  }
+
+  .nav-icon-wrap {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--hover-bg, rgba(0,0,0,0.06));
+    color: var(--secondary-text, #666);
+    flex-shrink: 0;
+  }
+
+  .nav-icon-wrap.active {
+    background: rgba(255,255,255,0.2);
+    color: white;
+  }
+
+  .nav-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .nav-desc {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    line-height: 1.3;
+  }
+
+  :global(.nav-chevron) {
+    opacity: 0.3;
+    flex-shrink: 0;
+  }
+
+  .nav-item.active :global(.nav-chevron) {
+    opacity: 0.6;
+  }
+
+  /* ===== 右メイン ===== */
+  .settings-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-tabs {
+    display: none;
+  }
+
+  .main-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px 40px;
+  }
+
+  /* ===== セクションヘッダー ===== */
+  .section-header {
+    margin-bottom: 16px;
+  }
+
+  .section-header h2 {
+    margin: 0 0 4px;
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--primary-text, #1a1d21);
+  }
+
+  .section-header p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--secondary-text, #888);
+    line-height: 1.4;
+  }
+
+  /* ===== カード (iOS Settings風グループ) ===== */
+  .card {
+    background: var(--bg-primary, #fff);
+    border-radius: 12px;
     overflow: hidden;
-    border: var(--border);
+    box-shadow: 0 0 0 1px var(--border-color, rgba(0,0,0,0.06));
   }
 
-  /* last-child でボーダーを消す */
-  .settings-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
+  .card-body {
+    padding: 16px;
   }
 
-  /* フォーカス状態 */
-  .form-input:focus {
+  .card-footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color, #eee);
+    flex-wrap: wrap;
+  }
+
+  .card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    min-height: 44px;
+    gap: 12px;
+  }
+
+  .card-row + .card-row {
+    border-top: 1px solid var(--border-color, rgba(0,0,0,0.06));
+  }
+
+  .row-label {
+    font-size: 0.875rem;
+    color: var(--primary-text, #1a1d21);
+    flex-shrink: 0;
+  }
+
+  .row-value {
+    font-size: 0.875rem;
+    color: var(--secondary-text, #888);
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .row-value.mono {
+    font-family: monospace;
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .row-check {
+    color: var(--primary-color, #059669);
+  }
+
+  .row-action {
+    border: none;
+    background: none;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--secondary-text, #ccc);
+    display: flex;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+
+  .row-action:hover {
+    color: #dc2626;
+    background: rgba(220,38,38,0.08);
+  }
+
+  .relay-row {
+    gap: 8px;
+  }
+
+  .relay-url-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: monospace;
+    font-size: 0.813rem;
+    color: var(--primary-text, #1a1d21);
+  }
+
+  .empty-row .row-label {
+    color: var(--secondary-text, #aaa);
+    font-style: italic;
+  }
+
+  /* ===== ステータスドット ===== */
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .status-ok { background: #22c55e; }
+  .status-ng { background: #ef4444; }
+  .status-idle { background: #d1d5db; }
+
+  /* ===== フォーム ===== */
+  .field-label {
+    display: block;
+    font-size: 0.813rem;
+    font-weight: 600;
+    color: var(--primary-text, #1a1d21);
+    margin-bottom: 6px;
+  }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .field-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f9f9f9);
+    color: var(--primary-text, #1a1d21);
+    font-size: 0.875rem;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+  }
+
+  .field-input:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: var(--primary-color, #059669);
+    background: var(--bg-primary, #fff);
   }
 
-  .password-toggle:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
+  .field-input.mono {
+    font-family: monospace;
+    font-size: 0.813rem;
   }
-</style> 
+
+  .field-input.masked {
+    -webkit-text-security: disc;
+  }
+
+  .input-wrap .field-input {
+    padding-right: 40px;
+  }
+
+  .input-action {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--secondary-text, #888);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+  }
+
+  .input-action:hover {
+    color: var(--primary-text, #1a1d21);
+  }
+
+  .field-hint {
+    font-size: 0.75rem;
+    color: var(--secondary-text, #aaa);
+    margin: 6px 0 0;
+  }
+
+  .input-with-btn {
+    display: flex;
+    gap: 8px;
+  }
+
+  .input-with-btn .field-input {
+    flex: 1;
+  }
+
+  /* ===== ボタン ===== */
+  .btn-area {
+    margin-top: 16px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.813rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .btn-compact {
+    padding: 8px 14px;
+  }
+
+  .btn-primary {
+    background: var(--primary-color, #059669);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    filter: brightness(0.9);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--primary-text, #1a1d21);
+    border: 1px solid var(--border-color, #ddd);
+  }
+
+  .btn-ghost:hover {
+    background: var(--hover-bg, rgba(0,0,0,0.04));
+  }
+
+  .btn-danger-ghost {
+    background: transparent;
+    color: #dc2626;
+    border: 1px solid rgba(220,38,38,0.2);
+  }
+
+  .btn-danger-ghost:hover {
+    background: rgba(220,38,38,0.06);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ===== 通知 ===== */
+  .notice {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 0.813rem;
+    line-height: 1.5;
+    margin-top: 16px;
+    align-items: flex-start;
+  }
+
+  .notice strong {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .notice p {
+    margin: 0;
+  }
+
+  .notice-warn {
+    background: var(--warning-bg, #fffbeb);
+    color: var(--warning-text, #92400e);
+  }
+
+  .notice-info {
+    background: var(--info-bg, #eff6ff);
+    color: var(--info-text, #1e40af);
+  }
+
+  /* ===== リンク ===== */
+  .link-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .link-row a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--primary-color, #059669);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background 0.12s;
+  }
+
+  .link-row a:hover {
+    background: rgba(5,150,105,0.08);
+  }
+
+  /* ===== モバイル ===== */
+  @media (max-width: 767px) {
+    .settings-body {
+      flex-direction: column;
+    }
+
+    .settings-nav {
+      display: none;
+    }
+
+    .mobile-tabs {
+      display: flex;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-bottom: 1px solid var(--border-color, #e5e5e5);
+      background: var(--bg-primary, #fff);
+      flex-shrink: 0;
+      gap: 0;
+    }
+
+    .mobile-tab {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      color: var(--secondary-text, #888);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: all 0.12s;
+    }
+
+    .mobile-tab.active {
+      color: var(--primary-color, #059669);
+      border-bottom-color: var(--primary-color, #059669);
+    }
+
+    .main-scroll {
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .settings-header {
+      padding: 0 12px;
+    }
+
+    .header-title {
+      flex: 1;
+      text-align: center;
+    }
+
+    .back-btn span {
+      display: none;
+    }
+  }
+
+  /* ===== 大画面 ===== */
+  @media (min-width: 768px) {
+    .header-spacer {
+      display: none;
+    }
+  }
+</style>

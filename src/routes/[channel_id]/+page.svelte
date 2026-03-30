@@ -4,6 +4,7 @@
   import Modal from "$lib/components/modal.svelte";
   import Post from "$lib/components/post.svelte";
   import Icon from "$lib/components/icons.svelte";
+  import Spinner from "$lib/components/spinner.svelte";
   import {
     getChannelMeta,
     getSingleEvent,
@@ -22,6 +23,7 @@
     getUseNip07,
     nip07Available,
     checkNip07Availability,
+    markChannelAsRead,
   } from "$lib/store";
   import type { Nostr } from "nosvelte";
   import { Metadata, NostrApp, UniqueEventList } from "nosvelte";
@@ -89,12 +91,14 @@
 
   let isLoggedIn = false;
   let textareaElement: HTMLTextAreaElement;
-  let messagesContainer: HTMLElement; // メッセージコンテナの参照
-  let shouldScrollToBottom = true; // 一番下までスクロールするかどうかのフラグ
-  let previousEventCount = 0; // 前回のイベント数
-  let isInitialLoad = true; // 初回ロードかどうか
-  let isUserScrolling = false; // ユーザーがスクロール中かどうか
-  let scrollTimeout: number; // スクロール終了を検知するためのタイマー
+  let messagesContainer: HTMLElement;
+  let shouldScrollToBottom = true;
+  let previousEventCount = 0;
+  let isInitialLoad = true;
+  let isUserScrolling = false;
+  let scrollTimeout: number;
+  let showNewMessageBanner = false;
+  let newMessageCount = 0;
 
   // 一番下までスクロールする関数
   const scrollToBottom = () => {
@@ -125,11 +129,12 @@
     const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
     
-    // 一番下近くにいる場合は自動スクロールを有効に
     shouldScrollToBottom = isNearBottom;
     
     if (shouldScrollToBottom) {
       logAutoScroll("ユーザーが最下部近くにスクロール");
+      showNewMessageBanner = false;
+      newMessageCount = 0;
     }
   };
 
@@ -189,17 +194,6 @@
     isLoggedIn = !!seckey || (useNip07 && get(nip07Available));
   };
 
-  // DOM監視を開始
-  onMount(() => {
-    messageCheckInterval = setInterval(checkMessageCountChange, 1000); // 1秒ごとにチェック
-    
-    return () => {
-      if (messageCheckInterval) {
-        clearInterval(messageCheckInterval);
-      }
-    };
-  });
-
   // 初期化時の処理
   onMount(() => {
     if (channel_id) {
@@ -237,15 +231,11 @@
     };
   });
 
-  // channel_idの変更を監視（確実にリセットするため）
   $: if (channel_id && channel_id !== previousChannelId) {
-    // コンポーネントキーを更新してUniqueEventListを強制再作成
     componentKey++;
-    // 状態を確実にリセット
     resetChannelState();
-    // チャンネル情報を読み込み
     loadChannelInfo(channel_id);
-    // 前回のチャンネルIDを更新
+    markChannelAsRead(channel_id);
     previousChannelId = channel_id;
   }
 
@@ -569,6 +559,48 @@
     return lines.slice(0, maxLines).join('\n') + '...';
   };
 
+  // 新着メッセージバナークリック → 最下部にスクロール
+  const scrollToNewMessages = () => {
+    showNewMessageBanner = false;
+    newMessageCount = 0;
+    shouldScrollToBottom = true;
+    isUserScrolling = false;
+    if (messagesContainer) {
+      messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+    }
+  };
+
+  // チャンネルの統計情報
+  let channelStats = { participants: 0, messageCount: 0 };
+  const updateChannelStats = (events: Nostr.Event[]) => {
+    const uniquePubkeys = new Set(events.map(e => e.pubkey));
+    channelStats = {
+      participants: uniquePubkeys.size,
+      messageCount: events.length,
+    };
+  };
+
+  // URL共有
+  let copiedUrl = false;
+  const shareChannelUrl = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      copiedUrl = true;
+      setTimeout(() => { copiedUrl = false; }, 2000);
+    } catch {
+      // fallback
+      const input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      copiedUrl = true;
+      setTimeout(() => { copiedUrl = false; }, 2000);
+    }
+  };
+
   // 作者の表示名を取得する関数
   const getAuthorDisplayName = (event: any, metadata: any) => {
     try {
@@ -627,17 +659,19 @@
     // 新しいイベントIDを検出
     const newEvents = events.filter(event => !knownEventIds.has(event.id));
     
-    if (newEvents.length > 0 && knownEventIds.size > 0) { // 初回ロード時は除外
+    if (newEvents.length > 0 && knownEventIds.size > 0) {
       console.log(`新規イベント検出: ${newEvents.length}件`);
       
-      // ユーザーが最下部近くにいて、かつスクロール中でない場合のみ自動スクロール
       if (shouldScrollToBottom && messagesContainer && !isUserScrolling) {
         logAutoScroll(`新規イベント: ${newEvents.length}件`);
         setTimeout(() => {
           if (!isUserScrolling && shouldScrollToBottom) {
             scrollToBottom();
           }
-        }, 200); // 少し長めの遅延でDOM更新を確実に待つ
+        }, 200);
+      } else if (!shouldScrollToBottom) {
+        showNewMessageBanner = true;
+        newMessageCount += newEvents.length;
       }
     }
     
@@ -711,12 +745,10 @@
         {req}
         let:events
       >
-        <!-- eventsの長さを監視 -->
-        <span class="hidden-debug">{eventsLength = events.length}</span>
+        <span class="hidden-debug">{eventsLength = events.length}{updateChannelStats(events)}</span>
 
-      <div slot="loading" class="loading-container flex flex-col items-center justify-center py-[60px] px-5 text-center text-foreground-secondary">
-        <div class="loading-spinner"></div>
-        <p>メッセージを読み込み中...</p>
+      <div slot="loading">
+        <Spinner message="メッセージを読み込み中..." />
       </div>
       <div slot="error" let:error class="error-container py-10 px-5 text-center text-error">
         <p class="text-error font-medium">エラー: {error}</p>
@@ -727,7 +759,6 @@
         <div class="channel-title-section">
           {#if showMenuButton}
             <button class="menu-btn" on:click={() => {
-              // 親コンポーネントのsidebarOpenを制御
               const chatArea = document.querySelector('.chat-container');
               if (chatArea) {
                 chatArea.dispatchEvent(new CustomEvent('toggleSidebar', { bubbles: true }));
@@ -736,15 +767,40 @@
               <Icon name="menu" size={18} />
             </button>
           {/if}
-          <h1 class="channel-title">
-            {#if channelNameLoaded}
-              {channelName || "無題のチャンネル"}
-            {:else}
-              読み込み中...
+          <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+            <h1 class="channel-title">
+              {#if channelNameLoaded}
+                {channelName || "無題のチャンネル"}
+              {:else}
+                読み込み中...
+              {/if}
+            </h1>
+            {#if channelStats.messageCount > 0}
+              <div class="channel-subtitle">
+                <span class="channel-stat">
+                  <Icon name="chat" size={12} />
+                  {channelStats.messageCount}件
+                </span>
+                <span class="channel-stat">
+                  <Icon name="users" size={12} />
+                  {channelStats.participants}人
+                </span>
+              </div>
             {/if}
-          </h1>
+          </div>
         </div>
         <div class="channel-controls">
+          <button
+            class="share-btn"
+            on:click={shareChannelUrl}
+            title="チャンネルURLをコピー"
+          >
+            {#if copiedUrl}
+              <Icon name="check" size={16} />
+            {:else}
+              <Icon name="share" size={16} />
+            {/if}
+          </button>
           <select bind:value={$selectedLimit} class="limit-selector">
             {#each limitLists as limit}
               <option value={limit}>{limit}件表示</option>
@@ -770,7 +826,7 @@
             
             <!-- その日の投稿一覧 -->
             <div class="posts-container">
-              {#each group.events as event (event.id)}
+              {#each group.events as event, idx (event.id)}
                 <Metadata let:metadata pubkey={event.pubkey} queryKey={["user_meta", event.pubkey]} >
                   <div class="message-wrapper">
                     <Post
@@ -781,7 +837,6 @@
                     />
                   </div>
                   
-                  <!-- メタデータ取得中の表示 -->
                   <div slot="loading" class="message-wrapper">
                     <Post
                       {event}
@@ -791,7 +846,6 @@
                     />
                   </div>
                   
-                  <!-- メタデータが見つからない場合の表示 -->
                   <div slot="nodata" class="message-wrapper">
                     <Post
                       {event}
@@ -801,7 +855,6 @@
                     />
                   </div>
                   
-                  <!-- エラー時の表示 -->
                   <div slot="error" class="message-wrapper">
                     <Post
                       {event}
@@ -816,6 +869,14 @@
           {/each}
         </div>
       </div>
+
+      <!-- 新着メッセージバナー -->
+      {#if showNewMessageBanner}
+        <button class="new-message-banner" on:click={scrollToNewMessages}>
+          <Icon name="down" size={14} />
+          <span>{newMessageCount}件の新着メッセージ</span>
+        </button>
+      {/if}
 
       <!-- メッセージ入力エリア -->
       {#key channel_id}
@@ -908,13 +969,13 @@
                 </div>
               </div>
             {:else}
-              <div class="login-prompt">
-                <div class="login-message">
-                  <p>メッセージ送信にはログインが必要です</p>
+              <div class="login-prompt-inline" on:click={() => settingsModal.set(true)} on:keydown={(e) => e.key === 'Enter' && settingsModal.set(true)} role="button" tabindex="0">
+                <div class="login-fake-input">
+                  <span class="login-fake-placeholder">メッセージを送信するにはログインが必要です</span>
                 </div>
-                <button class="login-button" on:click={() => settingsModal.set(true)}>
-                  <Icon name="key" size={16} />
-                  <span>ログインする</span>
+                <button class="login-button-compact" on:click|stopPropagation={() => settingsModal.set(true)}>
+                  <Icon name="key" size={14} />
+                  <span>ログイン</span>
                 </button>
               </div>
             {/if}
@@ -949,42 +1010,6 @@
     position: relative;
   }
 
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    text-align: center;
-    color: var(--secondary-text);
-  }
-
-  .loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-color);
-    border-top: 3px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 16px;
-  }
-
-  .loading-spinner::after {
-    content: "";
-    display: block;
-    width: 20px;
-    height: 20px;
-    margin: 8px;
-    border-radius: 50%;
-    border: 3px solid transparent;
-    border-top-color: var(--primary-color);
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
 
   /* error-container と error-message は Tailwind に移行済み */
 
@@ -1034,6 +1059,39 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .channel-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+    color: var(--secondary-text);
+  }
+
+  .channel-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .share-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--secondary-text);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .share-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--primary-color-alpha);
   }
 
   .channel-controls {
@@ -1094,6 +1152,8 @@
     margin-bottom: 8px;
   }
 
+
+
   /* 日付セパレーターのスタイル */
   .date-separator {
     display: flex;
@@ -1115,6 +1175,38 @@
     background: var(--chat-bg);
     padding: 0 8px;
     white-space: nowrap;
+  }
+
+  .new-message-banner {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: fit-content;
+    margin: 0 auto;
+    padding: 8px 20px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 20px 20px 0 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.15);
+    transition: background 0.2s;
+    animation: slideUp 0.2s ease-out;
+  }
+
+  .new-message-banner:hover {
+    background: var(--primary-color-hover);
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
   .input-area {
@@ -1458,52 +1550,56 @@
     box-shadow: none;
   }
 
-  .login-prompt {
-    background: var(--login-prompt-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
+  .login-prompt-inline {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    max-width: 600px;
-    margin: 0 auto;
+    gap: 12px;
+    cursor: pointer;
   }
 
-  .login-message {
+  .login-fake-input {
     flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-bg);
+    padding: 10px 12px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+    transition: all 0.2s;
   }
 
-  .login-prompt p {
-    margin: 0;
-    color: var(--secondary-text);
-    line-height: 1.4;
+  .login-prompt-inline:hover .login-fake-input {
+    border-color: var(--primary-color);
+    opacity: 1;
+  }
+
+  .login-fake-placeholder {
+    color: var(--placeholder-color);
     font-size: 0.9rem;
   }
 
-  .login-button {
+  .login-button-compact {
     background: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 10px 16px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 6px;
     white-space: nowrap;
     flex-shrink: 0;
+    min-height: 44px;
   }
 
-  .login-button:hover {
+  .login-button-compact:hover {
     background: var(--primary-color-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
   }
 
   @media (max-width: 767px) {
@@ -1529,22 +1625,18 @@
     }
 
     .input-container {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-    }
-
-    .button-group {
-      width: 100%;
-      justify-content: space-between;
+      flex-direction: row;
+      gap: 8px;
+      align-items: flex-end;
     }
 
     .send-button {
-      flex: 1;
       height: 48px;
-      padding: 12px 16px;
+      width: 48px;
+      min-width: 48px;
+      padding: 0;
       justify-content: center;
-      font-size: 1rem;
+      border-radius: 50%;
     }
 
     .image-preview-container {
@@ -1567,36 +1659,23 @@
       padding-left: 20px;
     }
 
-    .login-prompt {
-      padding: 12px 16px;
-      max-width: none;
-      margin: 0;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 12px;
-      text-align: center;
+    .login-prompt-inline {
+      gap: 8px;
     }
 
-    .login-message {
-      flex: none;
+    .login-fake-input {
+      min-height: 48px;
+      padding: 12px;
     }
 
-    .login-prompt p {
-      font-size: 0.85rem;
-      margin: 0;
-      line-height: 1.4;
+    .login-fake-placeholder {
+      font-size: 0.8rem;
     }
 
-    .login-message {
-      text-align: center;
-      margin-bottom: 12px;
-    }
-
-    .login-button {
-      width: 100%;
-      justify-content: center;
-      padding: 12px 16px;
-      font-size: 0.95rem;
+    .login-button-compact {
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      min-height: 48px;
     }
   }
 

@@ -15,10 +15,22 @@
     Trash2,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     Smile,
     Loader,
     Star,
-    Image
+    Image,
+    Search,
+    Share2,
+    Users,
+    Copy,
+    Check,
+    Globe,
+    CheckCircle,
+    XCircle,
+    Link,
+    Unlink,
+    Home
   } from 'lucide-svelte';
 
   export let name: string;
@@ -46,7 +58,19 @@
     smile: Smile,
     loader: Loader,
     star: Star,
-    image: Image
+    image: Image,
+    search: Search,
+    down: ChevronDown,
+    share: Share2,
+    users: Users,
+    copy: Copy,
+    check: Check,
+    globe: Globe,
+    'check-circle': CheckCircle,
+    'x-circle': XCircle,
+    link: Link,
+    unlink: Unlink,
+    home: Home
   };
 
   $: IconComponent = iconMap[name as keyof typeof iconMap];

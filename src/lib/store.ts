@@ -263,3 +263,40 @@ export async function refreshApiChannelList(
 ) {
   return loadApiChannelList(sort, limit, true);
 }
+
+// =========================
+// 未読管理
+// =========================
+
+const LAST_READ_KEY = 'nchan_last_read_v1';
+
+function getLastReadMap(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(LAST_READ_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function markChannelAsRead(channelId: string) {
+  if (typeof window === 'undefined') return;
+  const map = getLastReadMap();
+  map[channelId] = Date.now();
+  localStorage.setItem(LAST_READ_KEY, JSON.stringify(map));
+}
+
+export function getLastReadTime(channelId: string): number {
+  const map = getLastReadMap();
+  return map[channelId] || 0;
+}
+
+export function hasUnread(channelId: string, latestUpdate: number | string): boolean {
+  if (!latestUpdate) return false;
+  const lastRead = getLastReadTime(channelId);
+  if (lastRead === 0) return false;
+  const updateTime = typeof latestUpdate === 'number'
+    ? latestUpdate * 1000
+    : new Date(latestUpdate).getTime();
+  return updateTime > lastRead;
+}

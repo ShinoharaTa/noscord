@@ -4,6 +4,7 @@
   import { newThread, newThreadWithNip07, post, postWithNip07 } from "$lib/nostr";
   import { getSecKey, settingsModal, getUseNip07, nip07Available, checkNip07Availability } from "$lib/store";
   import Icon from "$lib/components/icons.svelte";
+  import Spinner from "$lib/components/spinner.svelte";
   import "websocket-polyfill";
   let name = "";
   let postContent = "";
@@ -91,10 +92,7 @@
   </div>
 
   {#if isChecking}
-    <div class="flex flex-col items-center justify-center py-20 px-5 text-center">
-      <div class="loading-spinner"></div>
-      <p>認証状態を確認中...</p>
-    </div>
+    <Spinner message="認証状態を確認中..." />
   {:else if !isLoggedIn}
     <div class="bg-surface-card border border-border rounded-lg py-10 px-8 max-md:p-6 shadow-md">
       <div class="mb-4 text-accent">
@@ -123,11 +121,12 @@
         <label class="block font-semibold text-[var(--primary-text)] mb-2 text-base" for="channel-name">
           チャンネル名 <span class="text-error">*</span>
         </label>
-        <input 
+        <input
           id="channel-name"
-          type="text" 
-          bind:value={name} 
+          type="text"
+          bind:value={name}
           placeholder="例: 雑談、技術議論、ニュース"
+          autocomplete="off"
           class="form-input w-full py-3 px-4 border border-border rounded-md bg-surface-input text-foreground text-base leading-snug transition-all font-[inherit] max-w-full"
           maxlength="100"
           disabled={isSubmitting}
@@ -213,17 +212,6 @@
     background: var(--disabled-bg);
     cursor: not-allowed;
     transform: none;
-  }
-
-  /* スピナー */
-  .loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-color);
-    border-top: 3px solid var(--primary-color);
-    border-radius: 9999px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 16px;
   }
 
   .spinner {

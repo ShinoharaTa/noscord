@@ -99,11 +99,15 @@ export interface ReactionSummary {
 
 export function aggregateReactions(reactions: any[], currentUserPubkey?: string): ReactionSummary[] {
   const reactionMap = new Map<string, ReactionSummary>();
-  
+
   reactions.forEach((reaction) => {
-    const content = reaction.content;
+    let content = reaction.content;
     if (!content) return;
-    
+
+    // NIP-25: "+" を 👍 に、"-" を 👎 に正規化して集約
+    if (content === '+') content = '👍';
+    if (content === '-') content = '👎';
+
     if (reactionMap.has(content)) {
       const existing = reactionMap.get(content)!;
       // すべてのリアクションを1件ずつカウント（重複チェックなし）
@@ -141,23 +145,14 @@ export function sanitizeReactionContent(content: string): string {
 // リアクション用の絵文字処理関数
 export function processReactionEmoji(content: string, reactionEvent?: any): string {
   if (!content) return content;
-  
-  // まず安全性のためサニタイズ
+
+  // NIP-25: "+" はlike（👍で表示）
+  if (content === '+') return '👍';
+  if (content === '-') return '👎';
+
   const safeContent = sanitizeReactionContent(content);
   
-  // デバッグ: リアクションイベントの内容を確認
-  if (reactionEvent && safeContent.startsWith(':')) {
-    console.log('カスタム絵文字リアクション処理:', {
-      originalContent: content,
-      safeContent: safeContent,
-      contentLength: content.length,
-      safeContentLength: safeContent.length,
-      eventTags: reactionEvent.tags,
-      eventId: reactionEvent.id?.slice(0, 8) + '...'
-    });
-  }
-  
-  // リアクションイベントにemojiタグがある場合、そのマッピングを使用
+  // リアクションイベントのemojiタグからURLマッピングを構築
   let emojiMap: Record<string, string> = {};
   if (reactionEvent && reactionEvent.tags) {
     const emojiTags = reactionEvent.tags.filter((tag: any) => tag[0] === 'emoji');
@@ -166,55 +161,22 @@ export function processReactionEmoji(content: string, reactionEvent?: any): stri
         emojiMap[tag[1]] = tag[2];
       }
     });
-    
-    if (emojiTags.length > 0) {
-      console.log('見つかったemojiタグ:', emojiTags);
-    }
   }
-  
-  // ショートコード形式 (:shortcode:) をチェック
-  const shortcodeMatch = safeContent.match(/^:([a-zA-Z0-9_+-]+):?$/); // 末尾の:がなくても対応
+
+  // NIP-30: ショートコード形式 (:shortcode:) のカスタム絵文字を処理
+  const shortcodeMatch = safeContent.match(/^:([a-zA-Z0-9_+-]+):?$/);
   if (shortcodeMatch) {
     const shortcode = shortcodeMatch[1];
     const url = emojiMap[shortcode];
-    
-    console.log(`ショートコード "${shortcode}" の処理:`, {
-      originalContent: content,
-      safeContent: safeContent,
-      shortcode: shortcode,
-      url,
-      hasMapping: !!url,
-      emojiMapKeys: Object.keys(emojiMap),
-      emojiMapValues: Object.values(emojiMap)
-    });
-    
-    if (url && !url.includes('emoji.example.com')) {
-      // カスタム絵文字として表示
+
+    if (url) {
       const style = 'width:1.2em;height:1.2em;vertical-align:middle;display:inline-block;object-fit:contain;';
       return `<img src="${url}" alt=":${shortcode}:" class="reaction-emoji-img" title=":${shortcode}:" style="${style}" />`;
     }
-    
-    // フォールバック: 一般的なカスタム絵文字のマッピング（テスト用）
-    const commonEmojiMap: Record<string, string> = {
-      'heart': '❤️',
-      'thumbsup': '👍',
-      'thumbsdown': '👎',
-      'fire': '🔥',
-      'rocket': '🚀',
-      'eyes': '👀',
-      'thinking': '🤔',
-      'laughing': '😂',
-      'cry': '😢',
-      'angry': '😠',
-      'sushiyuki': '🍣' // テスト用にsushiyukiを追加
-    };
-    
-    if (commonEmojiMap[shortcode]) {
-      console.log(`フォールバック絵文字適用: ${shortcode} -> ${commonEmojiMap[shortcode]}`);
-      return commonEmojiMap[shortcode];
-    }
+
+    // emojiタグにURLがない場合はショートコードをそのまま表示
+    return `:${shortcode}:`;
   }
-  
-  // 通常の絵文字（Unicode）や未知のショートコードはそのまま表示
+
   return safeContent;
 }

@@ -1,12 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
   import "../styles/app.css";
   import "../styles/style.scss";
   import Sidebar from "$lib/components/sidebar.svelte";
   import ChatArea from "$lib/components/chat-area.svelte";
   import SettingsModal from "$lib/components/settings-modal.svelte";
-  import Icon from "$lib/components/icons.svelte";
 
   let sidebarOpen = false;
 
