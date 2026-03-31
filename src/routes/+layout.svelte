@@ -12,21 +12,13 @@
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/service-worker.js")
-        .catch(() => {
-          // ServiceWorker registration failed - not critical for functionality
-        });
+        .catch(() => {});
     }
 
-    // レスポンシブ対応のサイドバー制御
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        sidebarOpen = true;
-      } else {
-        sidebarOpen = false;
-      }
+      sidebarOpen = window.innerWidth >= 768;
     };
 
-    // 初期状態を設定
     handleResize();
     window.addEventListener('resize', handleResize);
 
@@ -34,21 +26,6 @@
       window.removeEventListener('resize', handleResize);
     };
   });
-
-  // サイドバーオーバーレイのクリックで閉じる
-  const closeSidebar = () => {
-    if (window.innerWidth < 768) {
-      sidebarOpen = false;
-    }
-  };
-
-  const handleOverlayKeydown = (event: KeyboardEvent) => {
-    // Enter / Space で閉じる（A11y）
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      closeSidebar();
-    }
-  };
 </script>
 
 <div class="flex h-dvh overflow-hidden relative pt-[env(safe-area-inset-top)]">
@@ -58,17 +35,4 @@
   </ChatArea>
 </div>
 
-<!-- モバイル用オーバーレイ：統一された実装 -->
-{#if sidebarOpen && typeof window !== 'undefined' && window.innerWidth < 768}
-  <div
-    class="fixed inset-0 bg-black/50 z-[var(--z-sidebar-overlay)] md:hidden"
-    role="button"
-    aria-label="サイドバーを閉じる"
-    tabindex="0"
-    on:click={closeSidebar}
-    on:keydown={handleOverlayKeydown}
-  ></div>
-{/if}
-
-<!-- 設定モーダル -->
 <SettingsModal />

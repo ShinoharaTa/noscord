@@ -49,6 +49,16 @@
   $: currentPath = $page.url.pathname;
 </script>
 
+{#if isOpen}
+  <div
+    class="sidebar-overlay"
+    role="button"
+    aria-label="サイドバーを閉じる"
+    tabindex="-1"
+    on:click={() => (isOpen = false)}
+    on:keydown={(e) => { if (e.key === 'Escape') isOpen = false; }}
+  ></div>
+{/if}
 <div class="sidebar flex flex-col border-r border-border" class:open={isOpen}>
   <div class="sidebar-content flex-1 overflow-y-auto p-0">
     <!-- チャンネル一覧 -->
@@ -149,7 +159,21 @@
 </div>
 
 <style>
-  /* サイドバーのアニメーション・レスポンシブ（Tailwind では表現が複雑な部分） */
+  /* オーバーレイ: モバイルのみ、サイドバーの背面に表示 */
+  .sidebar-overlay {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .sidebar-overlay {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: calc(var(--z-sidebar) - 1);
+    }
+  }
+
   .sidebar {
     position: fixed;
     top: 0;

@@ -106,7 +106,6 @@
 
   /* Z-index → z-sidebar, z-modal, etc. */
   --z-sidebar: 100;
-  --z-sidebar-overlay: 150;
   --z-modal-overlay: 300;
   --z-modal: 301;
   --z-settings-overlay: 400;
